@@ -1,0 +1,42 @@
+services:
+  jenkins-docker:
+    image: docker:dind
+    container_name: nyt-dc-jenkins-docker
+    privileged: true
+    networks:
+      jenkins:
+        aliases:
+          - docker
+    environment:
+      DOCKER_TLS_CERTDIR: "/certs"
+    volumes:
+      - jenkins-docker-certs:/certs/client
+      - jenkins-data:/var/jenkins_home
+    ports:
+      - "2376:2376"
+    command: --storage-driver overlay2
+    restart: always
+
+  jenkins-blueocean:
+    build: .
+    container_name: nyt-dc-jenkins-blueocean
+    networks:
+      - jenkins
+    environment:
+      DOCKER_HOST: "tcp://docker:2376"
+      DOCKER_CERT_PATH: "/certs/client"
+      DOCKER_TLS_VERIFY: "1"
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - jenkins-docker-certs:/certs/client:ro
+    ports:
+      - "9105:8080"   # Modif Fabien
+      - "9150:50000"  # Modif Fabien
+    restart: on-failure
+
+networks:
+  jenkins:
+
+volumes:
+  jenkins-docker-certs:
+  jenkins-data:

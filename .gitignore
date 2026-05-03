@@ -1,0 +1,64 @@
+# Environment
+*.env
+.env.*
+!.env.example
+!.env.dev.example
+!.env.staging.example
+!.env.prod.example
+
+# Virtual environment
+.venv*
+
+# pyenv
+.python-version
+
+# Credentials dir
+creds/
+
+# Conf dir
+#_CONF
+#!_CONF/staging
+
+# Temporary dirs
+mnt
+
+# Data
+data
+
+# Docs
+#docs
+docs/plan.txt
+
+# Externals
+assets/externals
+
+# Notebooks
+notebooks/01_setup.ipynb
+sandbox.ipynb
+
+# Jupyter Notebook checkpoints
+*.ipynb_checkpoints
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+nyt_sentiment.egg-info/
+
+# Jenkins
+_server-jenkins/AdminPassword
+_server-jenkins/README.md
+
+
+# Airflow
+_server-airflow/logs/
+
+# Automatic Deploy dirs
+# Check Deploy dirs names in Makefile
+_staging_app-server
+_HF-SPACES
+
+# Bind mounted dirs/files
+#_nginx-server/html/css
+
+pip_freeze.txt

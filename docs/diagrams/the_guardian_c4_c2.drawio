@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net">
+  <diagram id="ksB1ls-SKDAw1hgQvAmS" name="C4-C2-Conteneurs">
+    <mxGraphModel dx="3251" dy="979" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="qePGExuxY-maBQGzt9F0-1" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;" value="C4 — Niveau 2 : Conteneurs&lt;br&gt;The Guardian Economic Sentiment System" vertex="1">
+          <mxGeometry height="50" width="600" x="527" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-2" parent="1" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];shape=mxgraph.lean_mapping.electronic_info_flow_edge;whiteSpace=wrap;html=1;fillColor=#FFFFCC;strokeColor=#666666;fontSize=13;fontStyle=1;verticalAlign=top;dashed=1;rounded=1;arcSize=4;fontColor=#333333;" value="HF Space — Manager" vertex="1">
+          <mxGeometry height="700" width="540" x="80" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=11;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;nginx_service&lt;/b&gt;&lt;br&gt;[service permanent]&lt;br&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Reverse proxy&lt;/li&gt;&lt;/ul&gt;" vertex="1">
+          <mxGeometry height="80" width="160" x="110" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;api_service&lt;/b&gt;&lt;br&gt;[service permanent]&lt;br&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;FastAPI — endpoints métier&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;/predict /trend /health&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;/run/* /status/*&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;subprocess → workers&lt;/li&gt;&lt;/ul&gt;" vertex="1">
+          <mxGeometry height="100" width="200" x="340" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=11;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;streamlit_service&lt;/b&gt;&lt;br&gt;[service permanent]&lt;br&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;ul&gt;&lt;li&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(51, 51, 51), rgb(193, 193, 193));&quot;&gt;Dashboard&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(51, 51, 51), rgb(193, 193, 193));&quot;&gt;Scores + tendances Prophet&lt;/span&gt;&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="190" x="110" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;feature_engineering_worker&lt;/b&gt;&lt;br&gt;[worker ponctuel]&lt;br&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Nettoyage, tokenisation&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Agrégations temporelles→ theguardian.features&lt;/li&gt;&lt;/ul&gt;" vertex="1">
+          <mxGeometry height="90" width="200" x="110" y="376" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;transformers_worker&lt;/b&gt;&lt;br&gt;[worker ponctuel]&lt;br&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Inférence FinBERT&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Charge @production MLflow→ theguardian.scores&lt;/li&gt;&lt;/ul&gt;" vertex="1">
+          <mxGeometry height="90" width="200" x="350" y="378" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;prophet_worker&lt;/b&gt;&lt;br&gt;[worker ponctuel]&lt;br&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;ul&gt;&lt;li&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Prévision tendance&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Fenêtre glissante&amp;nbsp;&lt;/span&gt;→ theguardian.forecasts&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="90" width="200" x="110" y="520" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-9" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;retrain_worker&lt;/b&gt;&lt;br&gt;[worker ponctuel]&lt;br&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Réentraînement modèles&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Log MLflow&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Promeut @production&lt;/li&gt;&lt;/ul&gt;" vertex="1">
+          <mxGeometry height="90" width="200" x="350" y="520" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-10" parent="1" style="text;html=1;strokeColor=#6c8ebf;fillColor=#dae8fc;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;fontStyle=2;" value="supervisord&#xa;gère les *_service" vertex="1">
+          <mxGeometry height="40" width="160" x="110" y="660" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-11" parent="1" style="text;html=1;strokeColor=#82b366;fillColor=#d5e8d4;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;fontStyle=2;" value="lib/ partagée&#xa;features · inference · train" vertex="1">
+          <mxGeometry height="40" width="200" x="350" y="660" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-13" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;mlflow_service&lt;/b&gt;&lt;br&gt;[service permanent]&lt;br&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Tracking server&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Model registry&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Alias @production&lt;/li&gt;&lt;/ul&gt;" vertex="1">
+          <mxGeometry height="150" width="325" x="750" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-12" parent="1" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];shape=mxgraph.lean_mapping.electronic_info_flow_edge;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;verticalAlign=top;dashed=1;rounded=1;arcSize=4;fillStyle=solid;gradientColor=none;" value="HF Space — MLflow" vertex="1">
+          <mxGeometry height="200" width="360" x="730" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-16" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;PostgreSQL&lt;/b&gt;&lt;div&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;b&gt;schéma mlflow&lt;/b&gt; : (&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Backend store MLflow,&amp;nbsp;&lt;/span&gt;runs, métriques, params)&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;b&gt;schéma theguardian&lt;/b&gt; :&amp;nbsp;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;articles · features · scores,&amp;nbsp;&lt;/span&gt;forecasts · jobs&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="130" width="230" x="730" y="393" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-17" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;S3&lt;/b&gt;&lt;br&gt;[stockage externe]&lt;br&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Artifact store MLflow&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Snapshots Evidently&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;IPC DAGs Airflow&lt;/li&gt;&lt;/ul&gt;" vertex="1">
+          <mxGeometry height="100" width="240" x="835" y="670" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-18" parent="1" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];shape=mxgraph.lean_mapping.electronic_info_flow_edge;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;fontStyle=1;verticalAlign=top;dashed=1;rounded=1;arcSize=4;" value="Airflow — local (Docker Compose)" vertex="1">
+          <mxGeometry height="290" width="890" x="-230" y="820" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-19" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;dag_infer&lt;/b&gt;&lt;br&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;HttpOp → /run/feature_engineering&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;HttpOp → /run/transformers&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;HttpOp → /status/{job_id}&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Schedule : horaire (non défini)&lt;/li&gt;&lt;/ul&gt;" vertex="1">
+          <mxGeometry height="90" width="230" x="100" y="890" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-20" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;dag_forecast&lt;/b&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;HttpOp → /run/prophet&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;HttpOp → /status/{job_id}&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Schedule : quotidien&lt;/li&gt;&lt;/ul&gt;" vertex="1">
+          <mxGeometry height="90" width="230" x="420" y="890" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-21" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;dag_retrain&lt;/b&gt;&lt;br&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;ul&gt;&lt;li&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;HttpOp → /run/feature_engineering&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;HttpOp → /run/retrain&lt;/span&gt;&lt;/li&gt;&lt;li&gt;HttpOp → /status/{job_id}&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Trigger : drift détecté&lt;/span&gt;&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="90" width="230" x="100" y="1000" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-22" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;dag_monitor&lt;/b&gt;&lt;br&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Evidently drift check&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;→ trigger dag_retrain si drift&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Schedule : toutes les 6h&lt;/li&gt;&lt;/ul&gt;" vertex="1">
+          <mxGeometry height="90" width="230" x="420" y="1000" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-23" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=11;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;Jenkins&lt;/b&gt;&lt;br&gt;[local — Docker DinD]&lt;br&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;pytest → test → build image → deploy HF Space&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Notification : Discord webhook&lt;/li&gt;&lt;/ul&gt;" vertex="1">
+          <mxGeometry height="100" width="240" x="-240" y="610" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-24" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;Analyste&lt;/b&gt;&#xa;[utilisateur]" vertex="1">
+          <mxGeometry height="50" width="120" x="-230" y="155" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-25" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=11;verticalAlign=middle;arcSize=8;" value="&lt;b&gt;The Guardian Article Search API&lt;/b&gt;&lt;br&gt;[API externe]" vertex="1">
+          <mxGeometry height="60" width="240" x="-240" y="393" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-26" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-24" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;" target="qePGExuxY-maBQGzt9F0-3" value="HTTPS">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-27" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-3" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;" target="qePGExuxY-maBQGzt9F0-4" value="/api/*">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-28" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-3" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;exitX=0.531;exitY=0.974;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.447;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="qePGExuxY-maBQGzt9F0-5" value="/">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-29" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-4" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;dashed=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.99;entryY=0.294;entryDx=0;entryDy=0;entryPerimeter=0;" target="qePGExuxY-maBQGzt9F0-6" value="subprocess">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="390" y="330" />
+              <mxPoint x="320" y="330" />
+              <mxPoint x="320" y="417" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-30" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-4" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.068;entryY=0.001;entryDx=0;entryDy=0;entryPerimeter=0;" target="qePGExuxY-maBQGzt9F0-7" value="subprocess">
+          <mxGeometry relative="1" x="0.4221" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="440" y="360" />
+              <mxPoint x="364" y="360" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-31" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-4" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;dashed=1;exitX=0.336;exitY=0.995;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" target="qePGExuxY-maBQGzt9F0-8" value="subprocess">
+          <mxGeometry relative="1" x="-0.2799" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="407" y="340" />
+              <mxPoint x="330" y="340" />
+              <mxPoint x="330" y="543" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-32" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-4" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;dashed=1;exitX=0.414;exitY=1.004;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" target="qePGExuxY-maBQGzt9F0-9" value="subprocess">
+          <mxGeometry relative="1" x="-0.1979" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="423" y="350" />
+              <mxPoint x="340" y="350" />
+              <mxPoint x="340" y="543" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-33" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-6" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;" target="qePGExuxY-maBQGzt9F0-16" value="lit/écrit&lt;div&gt;schéma theguardian&lt;/div&gt;">
+          <mxGeometry relative="1" x="-0.723" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="500" y="480" />
+              <mxPoint x="500" y="480" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-34" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-7" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;entryX=-0.001;entryY=0.303;entryDx=0;entryDy=0;exitX=0.999;exitY=0.605;exitDx=0;exitDy=0;exitPerimeter=0;entryPerimeter=0;" target="qePGExuxY-maBQGzt9F0-16" value="écrit scores&lt;div&gt;schéma theguardian&lt;/div&gt;">
+          <mxGeometry relative="1" x="0.2279" y="2" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-35" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-8" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;entryX=-0.001;entryY=0.822;entryDx=0;entryDy=0;entryPerimeter=0;" target="qePGExuxY-maBQGzt9F0-16" value="écrit forecasts&lt;div&gt;schéma theguardian&lt;/div&gt;">
+          <mxGeometry relative="1" x="-0.1176" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="210" y="500" />
+            </Array>
+            <mxPoint x="710" y="500" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-36" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-7" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;entryX=0.082;entryY=1.003;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.635;exitY=0.012;exitDx=0;exitDy=0;exitPerimeter=0;" target="qePGExuxY-maBQGzt9F0-13" value="charge @production">
+          <mxGeometry relative="1" x="-0.5773" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="477" y="350" />
+              <mxPoint x="777" y="350" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-37" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-8" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;entryX=0.771;entryY=1.001;entryDx=0;entryDy=0;entryPerimeter=0;" target="qePGExuxY-maBQGzt9F0-13" value="charge @production">
+          <mxGeometry relative="1" x="-0.8435" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="210" y="630" />
+              <mxPoint x="1000" y="630" />
+              <mxPoint x="1000" y="290" />
+            </Array>
+            <mxPoint x="973" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-38" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-9" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;entryX=0.725;entryY=0.997;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1.001;exitY=0.698;exitDx=0;exitDy=0;exitPerimeter=0;" target="qePGExuxY-maBQGzt9F0-13" value="log + promeut">
+          <mxGeometry relative="1" x="-0.7261" y="3" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="986" y="583" />
+            </Array>
+            <mxPoint x="550" y="590" as="sourcePoint" />
+            <mxPoint x="792.5172413793107" y="302.4799999999999" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-39" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-13" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;entryX=0.783;entryY=0.001;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.493;exitY=1.007;exitDx=0;exitDy=0;exitPerimeter=0;" target="qePGExuxY-maBQGzt9F0-16" value="backend store&lt;div&gt;schéma mlflow&lt;/div&gt;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="910" y="390" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-40" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-13" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;exitX=0.802;exitY=1.001;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.729;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="qePGExuxY-maBQGzt9F0-17" value="artifact store">
+          <mxGeometry relative="1" x="0.8921" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points" />
+            <mxPoint x="988" y="600" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-41" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-4" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;entryX=0;entryY=0.2;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1.006;exitY=0.36;exitDx=0;exitDy=0;exitPerimeter=0;" target="qePGExuxY-maBQGzt9F0-16" value="lit scores/forecasts&lt;div&gt;schéma theguardian&lt;/div&gt;">
+          <mxGeometry relative="1" x="-0.584" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="700" y="166" />
+              <mxPoint x="700" y="419" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-42" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-5" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;entryX=0;entryY=0.75;entryDx=0;entryDy=0;exitX=0.997;exitY=0.297;exitDx=0;exitDy=0;exitPerimeter=0;" target="qePGExuxY-maBQGzt9F0-4" value="REST">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="310" y="284" />
+              <mxPoint x="310" y="205" />
+            </Array>
+            <mxPoint x="290" y="281" as="sourcePoint" />
+            <mxPoint x="400" y="230" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-43" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-19" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;entryX=1.003;entryY=0.72;entryDx=0;entryDy=0;exitX=0.913;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryPerimeter=0;" target="qePGExuxY-maBQGzt9F0-4" value="HttpOperator /run/* + /status/*">
+          <mxGeometry relative="1" x="-0.7397" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="310" y="850" />
+              <mxPoint x="580" y="850" />
+              <mxPoint x="580" y="202" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-44" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-20" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;exitX=0.786;exitY=0.005;exitDx=0;exitDy=0;exitPerimeter=0;" value="HttpOperator /run/* + /status/*">
+          <mxGeometry relative="1" x="-0.9449" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="601" y="889" />
+              <mxPoint x="600" y="889" />
+              <mxPoint x="600" y="180" />
+            </Array>
+            <mxPoint x="540" y="180" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-45" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-21" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;exitX=1;exitY=0.312;exitDx=0;exitDy=0;exitPerimeter=0;" value="HttpOperator /run/retrain">
+          <mxGeometry relative="1" x="-0.3979" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="370" y="1025" />
+              <mxPoint x="370" y="860" />
+              <mxPoint x="591" y="860" />
+              <mxPoint x="591" y="190" />
+            </Array>
+            <mxPoint x="331" y="1025.44" as="sourcePoint" />
+            <mxPoint x="541" y="190" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-46" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-22" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;" target="qePGExuxY-maBQGzt9F0-17" value="snapshots Evidently">
+          <mxGeometry relative="1" x="-0.7565" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-47" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-22" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;dashed=1;" target="qePGExuxY-maBQGzt9F0-21" value="trigger si drift">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-48" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-6" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;" target="qePGExuxY-maBQGzt9F0-25" value="fetch articles REST">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-49" edge="1" parent="1" source="qePGExuxY-maBQGzt9F0-23" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;exitX=0.999;exitY=0.592;exitDx=0;exitDy=0;exitPerimeter=0;" value="déploie image">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="10" y="669" />
+            </Array>
+            <mxPoint x="80" y="670" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qePGExuxY-maBQGzt9F0-55" parent="1" style="shape=actor;whiteSpace=wrap;html=1;" value="" vertex="1">
+          <mxGeometry height="22" width="20" x="-123" y="169" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
