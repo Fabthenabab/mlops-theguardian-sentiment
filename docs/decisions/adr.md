@@ -63,6 +63,18 @@ Principe retenu :
 Limite assumée :
   Couplage sur l'instance physique Neon.
 
+Révision :
+Date : 2026-05-05
+  Décision initiale : instance MLflow partagée entre projets.
+  Révisé : un Space MLflow dédié par projet.
+  
+  Motif : artifact store S3 partagé sans isolation par préfixe entraîne un mélange des artifacts entre projets.
+  La séparation par experiment artifact_location est possible mais ajoute de la complexité à la configuration serveur.
+  Un Space dédié est plus simple, plus sûr, et reste gratuit sur HF.
+
+  PostgreSQL Neon reste partagé par schémas — pas de changement.
+  S3 : préfixe dédié par Space MLflow (s3://bucket/theguardian/).
+
 ---
 # ADR-003 — Notifications CI/CD : Discord webhook
 Date : 2026-05-01
@@ -285,3 +297,15 @@ Inconvénients :
 ### Limite
 
 Si le use case évolue vers du temps réel, ce pattern HTTP polling devra être réévalué (WebSocket ou queue dédiée).
+
+
+---
+# ADR-008 — Initial feed via notebook, feed incrémental via worker
+Date : 2026-05-05
+Le chargement historique des articles Guardian (2017-2026) a été réalisé en one-shot depuis un notebook local.
+Ce n'est pas un composant du système en production.
+
+Le feed incrémental est intégré dans worker_transformers :
+fetch → transform → insert → inférence dans le même process.
+
+Justification : pas de valeur à séparer fetch et inférence pour un batch incrémental de faible volume (quelques dizaines d'articles par run horaire).

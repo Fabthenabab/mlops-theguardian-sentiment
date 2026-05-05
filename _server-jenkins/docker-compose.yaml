@@ -1,7 +1,7 @@
 services:
   jenkins-docker:
     image: docker:dind
-    container_name: nyt-dc-jenkins-docker
+    container_name: theguardian-dc-jenkins-docker
     privileged: true
     networks:
       jenkins:
@@ -19,7 +19,7 @@ services:
 
   jenkins-blueocean:
     build: .
-    container_name: nyt-dc-jenkins-blueocean
+    container_name: theguardian-dc-jenkins-blueocean
     networks:
       - jenkins
     environment:

@@ -21,7 +21,7 @@ DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME")
-DB_SCHEMA = os.getenv("DB_SCHEMA", "nyt")
+DB_SCHEMA = os.getenv("DB_SCHEMA", "theguardian")
 
 
 from datetime import datetime, timezone
@@ -50,7 +50,7 @@ def get_engine():
 # ──────────────────────────────────────────────
 
 _ARTICLE_COLUMNS = """
-    uri              VARCHAR(100) PRIMARY KEY,
+    id               VARCHAR(200) PRIMARY KEY,
     date             DATE,
     text             TEXT,
     sentiment_label  VARCHAR(20),
@@ -107,27 +107,27 @@ def init_db(engine=None, schema=DB_SCHEMA):
 # ──────────────────────────────────────────────
 def transform_articles(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Prepare a raw NYT archive DataFrame for insertion into nyt.articles.
+    Prepare a raw The Guardian archive DataFrame for insertion into theguardian.articles.
 
-    Input columns expected : uri, snippet, lead_paragraph, pub_date
-    Output columns         : uri, date, text
+    Input columns expected : id, webPublicationDate, webTitle, fields.trailText, fields.bodyText
+    Output columns         : id, date, text
     Sentiment columns (sentiment_label, sentiment_score) are left absent —
     they will be filled later by the FinBERT worker.
     """
     df = df.copy()
 
-    expected_cols = ["uri", "snippet", "lead_paragraph", "pub_date"]
+    expected_cols = ["id", "webPublicationDate", "webTitle", "fields.trailText", "fields.bodyText"]
     df = df.loc[:, expected_cols].copy()
-    
 
     # Transform pub_date into useable format
-    df["date"] = pd.to_datetime(df["pub_date"]).dt.date
-    df.drop(columns=["pub_date"], inplace=True)
+    df["date"] = pd.to_datetime(df["webPublicationDate"]).dt.date
+    df.drop(columns=["webPublicationDate"], inplace=True)
 
     # Concat snippet & lead_paragraph
-    df["text"] = df['snippet'] + ' : ' + df['lead_paragraph']
-    df.drop('snippet',axis=1,inplace=True)
-    df.drop('lead_paragraph',axis=1,inplace=True)
+    df["text"] = df['webTitle'] + '. ' + df['fields.trailText'] + '. ' + df['fields.bodyText']
+    df.drop('webTitle', axis=1, inplace=True)
+    df.drop('fields.trailText', axis=1, inplace=True)
+    df.drop('fields.bodyText', axis=1, inplace=True)
 
     return df
 
@@ -138,12 +138,12 @@ def transform_articles(df: pd.DataFrame) -> pd.DataFrame:
 
 def insert_articles(engine, df: pd.DataFrame, schema=DB_SCHEMA) -> int:
     """
-    Insert a transformed DataFrame into nyt.articles.
+    Insert a transformed DataFrame into theguardian.articles.
     Skips rows whose uri already exists (ON CONFLICT DO NOTHING).
 
     Args:
         engine : SQLAlchemy engine
-        df     : DataFrame with columns [uri, date, text]
+        df     : DataFrame with columns [id, date, text]
         schema : target schema
 
     Returns:
@@ -155,9 +155,9 @@ def insert_articles(engine, df: pd.DataFrame, schema=DB_SCHEMA) -> int:
 
     rows = df.to_dict(orient="records")
     stmt = text(f"""
-        INSERT INTO {schema}.articles (uri, date, text)
-        VALUES (:uri, :date, :text)
-        ON CONFLICT (uri) DO NOTHING
+        INSERT INTO {schema}.articles (id, date, text)
+        VALUES (:id, :date, :text)
+        ON CONFLICT (id) DO NOTHING
     """)
 
     with engine.begin() as conn:
@@ -172,7 +172,7 @@ def insert_articles(engine, df: pd.DataFrame, schema=DB_SCHEMA) -> int:
 #  Update sentiment
 # ──────────────────────────────────────────────
 
-def update_sentiment(engine, uri: str, label: str, score: float, schema=DB_SCHEMA):
+def update_sentiment(engine, id: str, label: str, score: float, schema=DB_SCHEMA):
     """
     Update sentiment_label and sentiment_score for a single article.
 
@@ -182,10 +182,10 @@ def update_sentiment(engine, uri: str, label: str, score: float, schema=DB_SCHEM
         UPDATE {schema}.articles
         SET sentiment_label = :label,
             sentiment_score = :score
-        WHERE uri = :uri
+        WHERE id = :id
     """)
     with engine.begin() as conn:
-        conn.execute(stmt, {"uri": uri, "label": label, "score": score})
+        conn.execute(stmt, {"id": id, "label": label, "score": score})
 
 
 def update_sentiment_batch(engine, records: list[dict], schema=DB_SCHEMA):
@@ -193,7 +193,7 @@ def update_sentiment_batch(engine, records: list[dict], schema=DB_SCHEMA):
     Batch update sentiment for multiple articles.
 
     Args:
-        records : list of dicts with keys [uri, label, score]
+        records : list of dicts with keys [id, label, score]
     """
     if not records:
         return
@@ -202,7 +202,7 @@ def update_sentiment_batch(engine, records: list[dict], schema=DB_SCHEMA):
         UPDATE {schema}.articles
         SET sentiment_label = :label,
             sentiment_score = :score
-        WHERE uri = :uri
+        WHERE id = :id
     """)
     with engine.begin() as conn:
         conn.execute(stmt, records)
@@ -219,7 +219,7 @@ def fetch_unprocessed(engine, schema=DB_SCHEMA) -> pd.DataFrame:
     Return articles not yet processed by FinBERT (sentiment_label IS NULL).
     """
     stmt = text(f"""
-        SELECT uri, text
+        SELECT id, text
         FROM {schema}.articles
         WHERE sentiment_label IS NULL
         ORDER BY date
@@ -228,4 +228,25 @@ def fetch_unprocessed(engine, schema=DB_SCHEMA) -> pd.DataFrame:
         df = pd.read_sql(stmt, conn)
 
     logger.info("Fetched %d unprocessed articles from %s.articles", len(df), schema)
+    return df
+
+
+# ──────────────────────────────────────────────
+#  Fetch (pour prophet)
+# ──────────────────────────────────────────────
+
+def fetch_processed(engine, schema=DB_SCHEMA) -> pd.DataFrame:
+    """
+    Return articles already processed by FinBERT (sentiment_label IS NOT NULL).
+    """
+    stmt = text(f"""
+        SELECT *
+        FROM {schema}.articles
+        WHERE sentiment_label IS NOT NULL
+        ORDER BY date
+    """)
+    with engine.connect() as conn:
+        df = pd.read_sql(stmt, conn)
+
+    logger.info("Fetched %d already processed articles from %s.articles", len(df), schema)
     return df

@@ -43,7 +43,7 @@ sandbox.ipynb
 __pycache__/
 *.py[cod]
 
-nyt_sentiment.egg-info/
+theguardian_sentiment.egg-info/
 
 # Jenkins
 _server-jenkins/AdminPassword

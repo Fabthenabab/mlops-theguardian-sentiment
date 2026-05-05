@@ -1,4 +1,12 @@
 pandas
+requests
 dotenv
 sqlalchemy
+# torch via pip install torch --index-url https://download.pytorch.org/whl/cpu
+transformers
+ipywidgets
 psycopg2-binary
+prophet
+plotly
+nbformat
+mlflow
