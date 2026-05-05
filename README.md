@@ -28,8 +28,8 @@ $ pip install -e .
 
 ---
 ## Diagramme de contexte
-![C4 Niveau 1 — Contexte](docs/diagrams/the_guardian_c4_c1.svg)
+![C4 Niveau 1 — Contexte](docs/diagrams/the_guardian_c4_c1.drawio.svg)
 
 ---
 ## Diagramme de conteneur
-![C4 Niveau 2 — Conteneurs](docs/diagrams/the_guardian_c4_c2.svg)
+![C4 Niveau 2 — Conteneurs](docs/diagrams/the_guardian_c4_c2.drawio.svg)
