@@ -6,12 +6,52 @@ export
 
 # SOURCE DIRS
 MLFLOW_SRC_DIR=_server-mlflow
+REV_PROXY_DIR=_server-nginx
+DASHBOARD_SRC_DIR=_server-streamlit
+
 
 # DON'T CHANGE THESE NAMES
 MLFLOW=mlflow
 
 # DEPLOY DIRS
 STAGING_DIR=_staging_app-server
+
+
+
+.PHONY: pre-build build clean
+# ====================================================
+# Dev mode: compose
+# ====================================================
+compose: ## Compose and start local development
+# Build and Run services defined in ./docker-compose.yml
+# Create 1 container for each service communicating on a docker network
+# Using nginx rev proxy to transfer incoming requests to each service
+# Use ./.env.dev
+	$(eval include _CONF/dev/.env.dev)
+	@echo "🚀 INCLUDING .env.dev"
+	@echo "🚀 COMPOSING AND BUILDING LOCAL SERVICES IN CONTAINERS"
+	@docker compose down --rmi all --volumes --remove-orphans 2>/dev/null || true
+	@docker compose rm -f 2>/dev/null || true
+	@echo " => Cleaned containers and images: ✅"
+	@docker image prune -f && echo " => Removed dangling images: ✅"
+# Create _server-nginx/mnt
+# For automatically created files and copied streamlit files
+	@echo " => Create $(REV_PROXY_DIR)/mnt"
+	@rm -rf $(REV_PROXY_DIR)/mnt && mkdir $(REV_PROXY_DIR)/mnt
+	@cp -r $(REV_PROXY_DIR)/html/ $(REV_PROXY_DIR)/mnt/html/
+# Copy common shared css betwwen streamlit and nginx
+	@cp -r $(DASHBOARD_SRC_DIR)/src/assets/* $(REV_PROXY_DIR)/mnt/html/
+	@docker compose build && echo " => Building WITH cache from last version of base image: ✅"
+	@echo "🚀 Starting services..."
+	@docker compose up --force-recreate && echo " => Application stopped: 🛑"
+
+up: ## Start local development (3 containers)
+	@echo "🚀 STARTING LOCAL SERVICES IN CONTAINERS"
+	@echo "🚀 Starting services..."
+	@docker compose up --force-recreate && echo " => Application stopped: 🛑"
+
+
+
 
 # ====================================================
 # Staging mode: pre-build

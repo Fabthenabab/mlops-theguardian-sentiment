@@ -81,6 +81,7 @@ def create_schema(engine, schema=DB_SCHEMA):
         logger.info("Created schema %s", schema)
 
 
+# Initial creation
 def create_tables(engine, schema=DB_SCHEMA):
     """Drop then create tables + respective indexes in TABLES_SQL + INDEXES_SQL."""
     with engine.begin() as conn:
@@ -95,11 +96,32 @@ def create_tables(engine, schema=DB_SCHEMA):
         logger.info("Indexes ready")
 
 
+# New table creation - Done separately because we don't want to re-receate everything (and drop tables first..)
+def create_table_forecasts(engine, schema=DB_SCHEMA):
+    """Create theguardian.forecasts table if not exists."""
+    stmt = text(f"""
+        CREATE TABLE IF NOT EXISTS {schema}.forecasts (
+            id         SERIAL PRIMARY KEY,
+            run_id     VARCHAR(100),
+            run_date   DATE,
+            ds         DATE,
+            yhat       FLOAT,
+            yhat_lower FLOAT,
+            yhat_upper FLOAT,
+            created_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'utc')
+        )
+    """)
+    with engine.begin() as conn:
+        conn.execute(stmt)
+    logger.info("Table ready: %s.forecasts", schema)
+
+
 def init_db(engine=None, schema=DB_SCHEMA):
     """Drop everything, recreate schema + tables."""
     engine = engine or get_engine()
     create_schema(engine, schema)
     create_tables(engine, schema)
+    #create_table_forecasts(engine, schema)
     return engine
 
 # ──────────────────────────────────────────────
@@ -114,6 +136,7 @@ def transform_articles(df: pd.DataFrame) -> pd.DataFrame:
     Sentiment columns (sentiment_label, sentiment_score) are left absent —
     they will be filled later by the FinBERT worker.
     """
+    logger.info("function transform_articles")
     df = df.copy()
 
     expected_cols = ["id", "webPublicationDate", "webTitle", "fields.trailText", "fields.bodyText"]
@@ -149,6 +172,7 @@ def insert_articles(engine, df: pd.DataFrame, schema=DB_SCHEMA) -> int:
     Returns:
         Number of rows inserted.
     """
+    logger.info("function insert_articles")
     if df.empty:
         logger.info("insert_articles: empty DataFrame, nothing to insert")
         return 0
@@ -178,6 +202,7 @@ def update_sentiment(engine, id: str, label: str, score: float, schema=DB_SCHEMA
 
     Called by the FinBERT worker after inference.
     """
+    logger.info("function update_sentiment")
     stmt = text(f"""
         UPDATE {schema}.articles
         SET sentiment_label = :label,
@@ -195,6 +220,7 @@ def update_sentiment_batch(engine, records: list[dict], schema=DB_SCHEMA):
     Args:
         records : list of dicts with keys [id, label, score]
     """
+    logger.info("function update_sentiment_batch")
     if not records:
         return
 
@@ -218,6 +244,7 @@ def fetch_unprocessed(engine, schema=DB_SCHEMA) -> pd.DataFrame:
     """
     Return articles not yet processed by FinBERT (sentiment_label IS NULL).
     """
+    logger.info("function fetch_unprocessed")
     stmt = text(f"""
         SELECT id, text
         FROM {schema}.articles
@@ -239,6 +266,7 @@ def fetch_processed(engine, schema=DB_SCHEMA) -> pd.DataFrame:
     """
     Return articles already processed by FinBERT (sentiment_label IS NOT NULL).
     """
+    logger.info("function fetch_processed")
     stmt = text(f"""
         SELECT *
         FROM {schema}.articles
@@ -249,4 +277,90 @@ def fetch_processed(engine, schema=DB_SCHEMA) -> pd.DataFrame:
         df = pd.read_sql(stmt, conn)
 
     logger.info("Fetched %d already processed articles from %s.articles", len(df), schema)
+    return df
+
+
+# ──────────────────────────────────────────────
+#  Forecasts
+# ──────────────────────────────────────────────
+
+def write_forecasts(engine, forecast: pd.DataFrame, run_id: str, run_date, schema=DB_SCHEMA) -> int:
+    """
+    Write Prophet forecast rows into theguardian.forecasts
+
+    Args:
+        engine   : SQLAlchemy engine
+        forecast : Prophet forecast DataFrame (ds, yhat, yhat_lower, yhat_upper)
+        run_id   : MLflow run_id for traceability
+        run_date : date of the Prophet run
+        schema   : target schema
+
+    Returns:
+        Number of rows written.
+    """
+    logger.info("function write_forecasts")
+    if forecast.empty:
+        logger.info("write_forecasts: empty DataFrame, nothing to write")
+        return 0
+
+    df = forecast[["ds", "yhat", "yhat_lower", "yhat_upper"]].copy()
+    df["run_id"]   = run_id
+    df["run_date"] = run_date
+    df["ds"]       = pd.to_datetime(df["ds"]).dt.date
+
+    rows = df.to_dict(orient="records")
+
+    stmt = text(f"""
+        INSERT INTO {schema}.forecasts (run_id, run_date, ds, yhat, yhat_lower, yhat_upper)
+        VALUES (:run_id, :run_date, :ds, :yhat, :yhat_lower, :yhat_upper)
+    """)
+
+    with engine.begin() as conn:
+        conn.execute(stmt, rows)
+
+    logger.info("Wrote %d forecast rows into %s.forecasts (run_id: %s)", len(df), schema, run_id)
+    return len(df)
+
+
+
+def fetch_forecasts(engine, run_date=None, schema=DB_SCHEMA) -> pd.DataFrame:
+    """
+    Return Prophet forecasts for a given run_date.
+    If run_date is None, returns the latest run.
+
+    Args:
+        engine   : SQLAlchemy engine
+        run_date : date of the run (optional, defaults to latest)
+        schema   : target schema
+
+    Returns:
+        DataFrame with columns [ds, yhat, yhat_lower, yhat_upper, run_id, run_date]
+    """
+    logger.info("function fetch_forecasts")
+    # Get the last run if no date is provided
+    if run_date is None:
+        subquery = f"""
+            SELECT run_id FROM {schema}.forecasts
+            ORDER BY run_date DESC
+            LIMIT 1
+        """
+    else:   # Get the closest to the provided date
+        subquery = f"""
+            SELECT run_id FROM {schema}.forecasts
+            WHERE run_date <= :date
+            ORDER BY run_date DESC
+            LIMIT 1
+        """
+
+    stmt = text(f"""
+        SELECT ds, yhat, yhat_lower, yhat_upper, run_id, run_date
+        FROM {schema}.forecasts
+        WHERE run_id = ({subquery})
+        ORDER BY ds
+    """)
+
+    with engine.connect() as conn:
+        df = pd.read_sql(stmt, conn, params={"date": run_date} if run_date else {})
+
+    logger.info("Fetched %d forecast rows (run_date: %s)", len(df), run_date or "latest")
     return df

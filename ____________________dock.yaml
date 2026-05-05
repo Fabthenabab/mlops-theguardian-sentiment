@@ -1,0 +1,46 @@
+  worker-predict:
+    env_file: _CONF/dev/.env.dev
+    # Build configuration
+    build:
+      context: .
+      dockerfile: ./_worker-predict/Dockerfile
+    image: ${PROJECT_NAME}-dc-worker-predict-img
+    # Runtime configuration 
+    container_name: ${PROJECT_NAME}-dc-worker-predict
+    environment:
+      - PROJECT_NAME=${PROJECT_NAME}
+      - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}  # Load model
+      - MODEL_NAME=${MODEL_NAME}                    # Load model
+      - MODEL_ALIAS=${MODEL_ALIAS}                  # Load model
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_SCHEMA=${DB_SCHEMA}
+    # Networking & volumes
+    volumes:
+      - ./_worker-predict/src:/home/user/app/src
+      - ./pipeline:/home/user/app/pipeline             # access pipeline/ functions
+    networks:
+      - ${PROJECT_NAME}-network
+    restart: always
+
+  worker-watchdog:
+    env_file: _CONF/dev/.env.dev
+    # Build configuration
+    build:
+      context: .
+      dockerfile: ./_worker-watchdog/Dockerfile
+    image: ${PROJECT_NAME}-dc-worker-watchdog-img
+    # Runtime configuration 
+    container_name: ${PROJECT_NAME}-dc-worker-watchdog
+    environment:
+      - PROJECT_NAME=${PROJECT_NAME}
+    # Networking & volumes
+    volumes:
+      - ./_worker-watchdog/src:/home/user/app/src
+      - ./pipeline:/home/user/app/pipeline             # access pipeline/ functions
+    networks:
+      - ${PROJECT_NAME}-network
+    restart: always

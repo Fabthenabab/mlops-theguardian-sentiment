@@ -1,0 +1,26 @@
+---
+[theme]
+# Dark base for consistency with nginx red gradient
+base = "dark"
+
+# Primary color: neon orange (buttons, links, accents)
+primaryColor = "#ff7b00"
+
+# Main background: dark red tone from nginx gradient
+backgroundColor = "#7f1d1d"
+
+# Secondary background: medium red (containers, sidebar)
+# Matches the middle of the nginx gradient
+secondaryBackgroundColor = "#991b1b"
+
+# Text color: pure white (like nginx)
+textColor = "#ffffff"
+
+[server]
+headless = true
+enableXsrfProtection = false
+enableCORS = false
+
+[browser]
+gatherUsageStats = false
+---

@@ -46,7 +46,7 @@ def _fetch_weekly_sentiment(df: pd.DataFrame) -> pd.DataFrame:
     return weekly
 
 
-def run(horizon_days: int = HORIZON_DAYS):
+def run(retrain, horizon_days: int = HORIZON_DAYS):
     from pipeline.core.src.sql import fetch_processed
     
     logger.info("worker_prophet started")
@@ -81,19 +81,34 @@ def run(horizon_days: int = HORIZON_DAYS):
         mlflow.log_param("history_end",    str(weekly["ds"].max()))
         mlflow.log_metric("mae",           mae)
         
-        mv = mlflow.prophet.log_model(model,    name=MODEL_NAME)
+        # Log du modèle sans enregistrement direct dans le registre
+        mlflow.prophet.log_model(model, name=MODEL_NAME)
+        run_id = mlflow.active_run().info.run_id
+        
+        
+        # WRITE PROPHET FORECASTS
+        # Persits predictions for this run_id in Database
+        from pipeline.core.src.sql import write_forecasts
+        import datetime
+        run_date = datetime.date.today()
+        write_forecasts(engine, forecast, run_id=run_id, run_date=run_date, schema=SCHEMA)
+        
+        # Set tag
+        mlflow.set_tag("triggered_by", retrain)
+        
+        # Enregistrement séparé
+        model_uri = f"runs:/{run_id}/{MODEL_NAME}"
+        mv = mlflow.register_model(model_uri, name=MODEL_NAME)
 
-        # Model alias
+        # Alias
         client = mlflow.MlflowClient()
-        version = mv.model_versions[0].version
         client.set_registered_model_alias(
             name=MODEL_NAME,
             alias=MODEL_ALIAS,
-            version=version
+            version=mv.version
         )
 
-        run_id = mlflow.active_run().info.run_id
-        logger.info(f"MLflow run {RUN_NAME} logged — run_id: {run_id}. Model v{version} promoted to {MODEL_ALIAS}")
+        logger.info(f"Model v{mv.version} triggered by {retrain} - promoted to @{MODEL_ALIAS} — run_id: {run_id}")
 
     logger.info("worker_prophet done")
 
@@ -101,6 +116,15 @@ def run(horizon_days: int = HORIZON_DAYS):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
+    # retrain pour stocker la condition du retrain dans mlflow : retrain sur trigger evidently ou retrain sur scheduled
+    # retrain need to be passed as "scheduled" or "evidently_drift"
+    parser.add_argument(
+        "--retrain",
+        type=str,
+        choices=["scheduled", "evidently_drift"],
+        default="scheduled",
+        help="Origin of the retrain run"
+    )   
     parser.add_argument("--horizon-days", type=int, default=HORIZON_DAYS)
     args = parser.parse_args()
-    run(horizon_days=args.horizon_days)
+    run(retrain=args.retrain, horizon_days=args.horizon_days)

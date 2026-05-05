@@ -1,0 +1,7 @@
+# Fichiers de developpement
+.dockerignore
+Dockerfile*
+
+# Fichiers python
+__pycache__/
+*.py[cod]

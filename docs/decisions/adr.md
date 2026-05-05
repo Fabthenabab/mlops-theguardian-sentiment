@@ -234,6 +234,13 @@ Ce qui transite où :
 
 Les scores ne passent jamais par XCOM.
 
+```
+_workers/
+├── worker_transformers.py   → fetch Guardian + inférence FinBERT
+└── worker_prophet.py        → entraînement Prophet
+                               --retrain scheduled | evidently_drift
+```
+
 ### Airflow (local)
 
 ```
@@ -248,20 +255,22 @@ Airflow (local)
 
 ```
 dag_infer
-├── Task 1 : POST /run/feature_engineering → xcom_push(job_id)
-├── Task 2 : GET  /status/{job_id}         → poll jusqu'à "done"
-├── Task 3 : POST /run/transformers        → xcom_push(job_id)
-└── Task 4 : GET  /status/{job_id}         → poll jusqu'à "done"
+├── Task 1 : POST /run/transformers → xcom_push(job_id)
+└── Task 2 : GET  /status/{job_id}  → poll jusqu'à "done"  
 
 dag_forecast
-├── Task 1 : POST /run/prophet             → xcom_push(job_id)
-└── Task 2 : GET  /status/{job_id}         → poll jusqu'à "done"
+├── Task 1 : POST /run/prophet?retrain=scheduled → xcom_push(job_id)
+└── Task 2 : GET  /status/{job_id}               → poll jusqu'à "done"  
 
-dag_retrain
-├── Task 1 : POST /run/feature_engineering → xcom_push(job_id)
-├── Task 2 : GET  /status/{job_id}         → poll jusqu'à "done"
-├── Task 3 : POST /run/retrain             → xcom_push(job_id)
-└── Task 4 : GET  /status/{job_id}         → poll jusqu'à "done"
+dag_monitor
+├── Task 1 : Evidently drift check
+│            → snapshot S3 (rapport drift FinBERT)
+│            → calcul MAE fenêtre glissante Prophet
+└── Task 2 : POST /run/prophet?retrain=evidently_drift → si drift détecté
+             GET  /status/{job_id} → poll jusqu'à "done" 
+
+→ trigger dag_retrain si drift Prophet détecté
+→ snapshot S3 (rapport FinBERT drift)
 ```
 
 ### HF Space — Manager
@@ -309,3 +318,152 @@ Le feed incrémental est intégré dans worker_transformers :
 fetch → transform → insert → inférence dans le même process.
 
 Justification : pas de valeur à séparer fetch et inférence pour un batch incrémental de faible volume (quelques dizaines d'articles par run horaire).
+
+
+---
+# ADR-009 — Stratégie de monitoring et réentraînement Prophet
+Date : 2026-05-05
+## Contexte
+
+Le système comporte deux modèles avec des comportements distincts :
+- FinBERT : classifieur pré-entraîné, inférence sur texte
+- Prophet : modèle de série temporelle, entraîné sur les scores FinBERT agrégés
+
+## Ce que surveille Evidently
+
+### Drift FinBERT
+Distribution de sentiment_score et sentiment_label comparée à une référence historique.
+
+Interprétation : signal que la réalité économique médiatique a changé — pas nécessairement un problème du modèle.
+
+Action : visualisation dans Streamlit uniquement.
+Pas de réentraînement — FinBERT est un modèle pré-entraîné dont le fine-tuning n'est pas dans le périmètre de ce projet.
+
+### Drift Prophet
+MAE calculé sur une fenêtre glissante récente, comparé au MAE de référence du modèle @production.
+
+Action : déclenchement de dag_retrain si dérive détectée.
+
+## Stratégie de réentraînement Prophet
+
+dag_monitor détecte le drift Prophet
+→ déclenche dag_retrain
+→ worker_retrain réentraîne Prophet sur l'historique complet
+→ promotion @production automatique
+
+## Justification de la promotion automatique
+
+En période d'incertitude économique, un intervalle de confiance large est une information réelle — pas une dégradation du modèle.
+Un nouveau modèle entraîné sur les données récentes reflète mieux la réalité actuelle même si son MAE est moins bon que le modèle précédent.
+
+Le MAE est loggué dans MLflow à chaque run pour comparaison
+visuelle — la promotion n'est pas conditionnelle à son amélioration.
+
+## Ce qui est affiché dans Streamlit
+
+- Courbe Prophet : historique + projection + intervalle de confiance
+- Distribution du sentiment FinBERT (rapport Evidently)
+- Largeur de l'intervalle de confiance comme signal d'incertitude explicite
+
+
+---
+# ADR-010 — Chargement de FinBERT en mémoire via lifespan FastAPI
+Date : 2026-05-05
+## Contexte
+
+FinBERT (ProsusAI/finbert) est un modèle Transformer de ~440MB.
+Son chargement depuis HuggingFace Hub prend entre 30 et 180 secondes selon la bande passante et le cache disponible.
+
+## Problème observé
+
+Sans cache persistant, Docker Compose télécharge le modèle à chaque démarrage du conteneur FastAPI.
+Le healthcheck du conteneur (dependency) échoue par timeout pendant le téléchargement — le conteneur est marqué "unhealthy" avant que le modèle soit prêt.
+
+Solution appliquée : augmentation du start_period du healthcheck
+  start_period: 120s
+Laisse le temps au modèle d'être téléchargé et chargé avant que le healthcheck ne commence à évaluer l'état du conteneur.
+
+## Options de chargement du modèle dans FastAPI
+
+### Option A — Variable globale au niveau du module
+
+```python
+pipe = pipeline("text-classification", model="ProsusAI/finbert")
+```
+
+Problèmes :
+- Chargement au moment de l'import, pas au démarrage de l'app
+- Pas de contrôle sur le cycle de vie
+- Effet de bord : le modèle est chargé même dans les workers subprocess qui importent le module
+- Variable globale mutable — pattern à éviter
+
+### Option B — Chargement à la demande (lazy loading)
+
+```python
+@app.post("/predict")
+def predict():
+    pipe = pipeline(...)  # chargé à chaque requête
+```
+
+Problème : 30-180s par requête — inacceptable.
+
+## Décision : Option C — lifespan FastAPI
+
+Avantages :
+- Chargement unique au démarrage de l'application
+- Cycle de vie explicite et contrôlé (startup / shutdown)
+- Pas de variable globale — modèle accessible via app.state
+- Pas d'effet de bord sur les modules importés
+- Pattern officiel FastAPI pour la gestion des ressources
+
+Le modèle est passé aux routes via request.app.state.ml_models sans couplage entre les modules.
+
+## Observation sur le reload après retraining
+
+FinBERT n'est pas réentraîné dans ce projet — pas de problème de reload à gérer contrairement au projet fraud-detection.
+Si un fine-tuning était introduit, le lifespan devrait être étendu pour charger le modèle depuis MLflow @production plutôt que depuis HuggingFace Hub directement.
+
+
+---
+# ADR-011 — Persistance des forecasts Prophet en base
+
+## Contexte
+
+`worker_prophet` entraîne Prophet et logue le modèle dans MLflow.
+La question est : où stocker les prévisions pour que l'API `/trend` puisse les servir sans recharger le modèle à chaque requête ?
+
+## Options
+
+### Option A — Charger le modèle depuis MLflow à la demande
+
+`/trend` charge @production depuis MLflow, refait `make_future_dataframe` + `predict` à chaque requête.
+
+Problèmes :
+- Dépendance MLflow dans le chemin critique de l'API
+- Latence élevée à chaque requête (chargement Prophet)
+- Si MLflow est indisponible, /trend est indisponible
+
+### Option B — Stocker les forecasts en base (retenu)
+
+`worker_prophet` écrit le DataFrame forecast dans `theguardian.forecasts` après chaque run.
+`/trend` lit depuis PostgreSQL — pas de dépendance MLflow.
+
+## Valeur ajoutée : historique des prévisions
+
+Chaque run Prophet produit une prévision à un instant t.
+En loggant les forecasts avec leur run_id et run_date, on peut visualiser l'évolution des prévisions dans le temps :
+
+- Comparer la prévision du 1er janvier vs 1er février
+- Observer comment le modèle a anticipé les changements de tendance
+- Backtesting visuel sans recharger les modèles
+
+## Endpoints
+
+/trend           → forecast du dernier run
+/trend/{date}    → forecast du run le plus proche de cette date
+
+La requête SQL sélectionne le run_id dont la run_date est la plus récente inférieure ou égale à la date demandée.
+
+## Lien MLflow
+
+run_id est stocké dans chaque ligne de forecast — la prévision reste liée à son run MLflow pour traçabilité, sans en dépendre pour le serving.

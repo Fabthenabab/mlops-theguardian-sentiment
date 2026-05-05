@@ -1,0 +1,111 @@
+services:
+  nginx:
+    env_file:
+      - _CONF/dev/.env.dev
+    # Build configuration
+    build:
+      context: .
+      dockerfile: ./_server-nginx/Dockerfile
+      args:
+        PORT_NGINX_EXPOSED: ${PORT_NGINX_EXPOSED}     # make variable callable during build in Dockerfile
+    image: ${PROJECT_NAME}-dc-nginx-img               # Use this image by default
+    # Runtime configuration
+    container_name: ${PROJECT_NAME}-dc-nginx
+    environment:
+      - NGINX_ENVSUBST_FILTER=PORT_NGINX|PROXY_PASS
+    # Networking & volumes
+    networks:
+      - ${PROJECT_NAME}-network
+    ports:
+      - "${PORT_NGINX_EXTERNAL}:${PORT_NGINX_EXPOSED}"
+      # - "443:443"                         # No support for https by now
+    volumes:
+      - ./_server-nginx/default.conf.template:/etc/nginx/templates/default.conf.template
+      - ./_server-nginx/html:/var/www/html         # mount nginx html files
+      - ./_server-nginx/mnt/html:/var/www/html     # mount streamlit html styles
+    depends_on:
+      - dashboard
+    restart: unless-stopped
+
+  api:
+    env_file:
+      - _CONF/dev/.env.dev
+    # Build configuration
+    build:
+      context: .
+      dockerfile: ./_server-fastapi/Dockerfile
+      args:
+        PORT_FASTAPI_EXPOSED: ${PORT_FASTAPI_EXPOSED}         # make variable callable during build in Dockerfile
+    image: ${PROJECT_NAME}-dc-fastapi-img
+    # Runtime configuration
+    container_name: ${PROJECT_NAME}-dc-fastapi
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PORT_FASTAPI_EXPOSED=${PORT_FASTAPI_EXPOSED}
+      - PROJECT_ROOT=/app
+      - PROJECT_NAME=${PROJECT_NAME}
+      - CACHE_DIR=${CACHE_DIR}
+      - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}  # Load model
+      - MODEL_NAME=${MODEL_NAME}                    # Load model
+      - MODEL_ALIAS=${MODEL_ALIAS}                  # Load model
+      - EXPERIMENT_NAME=${EXPERIMENT_NAME}
+      - RUN_NAME=${RUN_NAME}
+      - TOKEN_HF=${TOKEN_HF}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_SCHEMA=${DB_SCHEMA}
+    # Networking & volumes
+    networks:
+      - ${PROJECT_NAME}-network
+    ports:
+      - "${PORT_FASTAPI_EXTERNAL}:${PORT_FASTAPI_EXPOSED}"
+    volumes:
+      - ./_server-fastapi/src:/home/user/app/src           # allows API hot reload
+      - ./pipeline:/home/user/app/pipeline             # access pipeline/ functions
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT_FASTAPI_EXPOSED}/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 150s   # Give time for the first downloads or model finbert
+    restart: unless-stopped
+  
+  dashboard:
+    env_file:
+      - _CONF/dev/.env.dev
+    # Build configuration
+    build:
+      context: .
+      dockerfile: ./_server-streamlit/Dockerfile
+      args:
+        PORT_STREAMLIT_EXPOSED: ${PORT_STREAMLIT_EXPOSED}     # make variable callable during build in Dockerfile
+    image: ${PROJECT_NAME}-dc-dashboard-img
+    # Runtime configuration 
+    container_name: ${PROJECT_NAME}-dc-dashboard
+    environment:
+      - PROJECT_ROOT=/app
+      - PROJECT_NAME=${PROJECT_NAME}
+      - PORT_STREAMLIT_EXPOSED=${PORT_STREAMLIT_EXPOSED}
+      - THEGUARDIAN_API_KEY=${THEGUARDIAN_API_KEY}
+    # Dependencies
+    depends_on:
+      api:
+        condition: service_healthy
+    # Networking & volumes
+    networks:
+      - ${PROJECT_NAME}-network
+    ports:
+      - "${PORT_STREAMLIT_EXTERNAL}:${PORT_STREAMLIT_EXPOSED}"
+    volumes:
+      - ./_server-streamlit:/home/user/app/streamlit   # allows dashboard hot reload
+      #- ./data:/home/user/app/data                     # access data/ if data/ used in local dev
+      - ./pipeline:/home/user/app/pipeline             # access pipeline/ functions
+    restart: unless-stopped
+
+
+networks:
+  mlops-theguardian-sentiment-network:
+    driver: bridge
