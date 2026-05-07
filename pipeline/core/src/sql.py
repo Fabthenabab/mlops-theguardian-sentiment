@@ -115,6 +115,24 @@ def create_table_forecasts(engine, schema=DB_SCHEMA):
         conn.execute(stmt)
     logger.info("Table ready: %s.forecasts", schema)
 
+# New table creation - Done separately because we don't want to re-receate everything (and drop tables first..)
+def create_table_jobs(engine, schema=DB_SCHEMA):
+    """Create theguardian.jobs table if not exists."""
+    stmt = text(f"""
+        CREATE TABLE IF NOT EXISTS {schema}.jobs (
+            job_id             VARCHAR(36) PRIMARY KEY,
+            worker             VARCHAR(50),
+            status             VARCHAR(20),
+            started_at         TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'utc'),
+            finished_at        TIMESTAMP,
+            error              TEXT,
+            articles_processed INTEGER
+        )
+    """)
+    with engine.begin() as conn:
+        conn.execute(stmt)
+    logger.info("Table ready: %s.jobs", schema)
+
 
 def init_db(engine=None, schema=DB_SCHEMA):
     """Drop everything, recreate schema + tables."""
@@ -125,7 +143,7 @@ def init_db(engine=None, schema=DB_SCHEMA):
     return engine
 
 # ──────────────────────────────────────────────
-#  Transform
+#  ARTICLES
 # ──────────────────────────────────────────────
 def transform_articles(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -154,10 +172,6 @@ def transform_articles(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
-
-# ──────────────────────────────────────────────
-#  Insert
-# ──────────────────────────────────────────────
 
 def insert_articles(engine, df: pd.DataFrame, schema=DB_SCHEMA) -> int:
     """
@@ -191,10 +205,6 @@ def insert_articles(engine, df: pd.DataFrame, schema=DB_SCHEMA) -> int:
     logger.info("Inserted %d / %d rows into %s.articles", inserted, len(df), schema)
     return inserted
 
-
-# ──────────────────────────────────────────────
-#  Update sentiment
-# ──────────────────────────────────────────────
 
 def update_sentiment(engine, id: str, label: str, score: float, schema=DB_SCHEMA):
     """
@@ -236,9 +246,8 @@ def update_sentiment_batch(engine, records: list[dict], schema=DB_SCHEMA):
     logger.info("Updated sentiment for %d articles in %s.articles", len(records), schema)
 
 
-# ──────────────────────────────────────────────
+
 #  Fetch (pour le worker FinBERT)
-# ──────────────────────────────────────────────
 
 def fetch_unprocessed(engine, schema=DB_SCHEMA) -> pd.DataFrame:
     """
@@ -258,9 +267,7 @@ def fetch_unprocessed(engine, schema=DB_SCHEMA) -> pd.DataFrame:
     return df
 
 
-# ──────────────────────────────────────────────
 #  Fetch (pour prophet)
-# ──────────────────────────────────────────────
 
 def fetch_processed(engine, schema=DB_SCHEMA) -> pd.DataFrame:
     """
@@ -281,7 +288,7 @@ def fetch_processed(engine, schema=DB_SCHEMA) -> pd.DataFrame:
 
 
 # ──────────────────────────────────────────────
-#  Forecasts
+#  FORECASTS
 # ──────────────────────────────────────────────
 
 def write_forecasts(engine, forecast: pd.DataFrame, run_id: str, run_date, schema=DB_SCHEMA) -> int:
@@ -320,7 +327,6 @@ def write_forecasts(engine, forecast: pd.DataFrame, run_id: str, run_date, schem
 
     logger.info("Wrote %d forecast rows into %s.forecasts (run_id: %s)", len(df), schema, run_id)
     return len(df)
-
 
 
 def fetch_forecasts(engine, run_date=None, schema=DB_SCHEMA) -> pd.DataFrame:
@@ -362,5 +368,61 @@ def fetch_forecasts(engine, run_date=None, schema=DB_SCHEMA) -> pd.DataFrame:
     with engine.connect() as conn:
         df = pd.read_sql(stmt, conn, params={"date": run_date} if run_date else {})
 
-    logger.info("Fetched %d forecast rows (run_date: %s)", len(df), run_date or "latest")
+    logger.info(f"Fetched {len(df)} forecast rows (run_date: {run_date or 'latest'})")
     return df
+
+
+# ──────────────────────────────────────────────
+#  JOBS
+# ──────────────────────────────────────────────
+
+def create_job(engine, job_id: str, worker: str, schema=DB_SCHEMA):
+    """Insert a new job with status 'started'."""
+    logger.info("function create_job")
+    stmt = text(f"""
+        INSERT INTO {schema}.jobs (job_id, worker, status)
+        VALUES (:job_id, :worker, 'started')
+    """)
+    with engine.begin() as conn:
+        conn.execute(stmt, {"job_id": job_id, "worker": worker})
+    logger.info(f"Job created: {job_id} ({worker})")
+
+
+def update_job(engine, job_id: str, status: str, schema=DB_SCHEMA, **kwargs):
+    """
+    Update job status and optional fields.
+    kwargs: finished_at, error, articles_processed
+    """
+    logger.info("function update_job")
+    fields = {"status": status}
+    fields.update(kwargs)
+
+    set_clause = ", ".join(f"{k} = :{k}" for k in fields)
+    stmt = text(f"""
+        UPDATE {schema}.jobs
+        SET {set_clause}
+        WHERE job_id = :job_id
+    """)
+    fields["job_id"] = job_id
+
+    with engine.begin() as conn:
+        conn.execute(stmt, fields)
+    logger.info(f"Job updated: {job_id} → {status}")
+
+
+def fetch_job(engine, job_id: str, schema=DB_SCHEMA) -> dict:
+    """Return job status as dict."""
+    logger.info("function fetch_job")
+    stmt = text(f"""
+        SELECT job_id, worker, status, started_at, finished_at,
+               error, articles_processed
+        FROM {schema}.jobs
+        WHERE job_id = :job_id
+    """)
+    with engine.connect() as conn:
+        row = conn.execute(stmt, {"job_id": job_id}).fetchone()
+
+    if row is None:
+        return {}
+
+    return dict(row._mapping)

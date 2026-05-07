@@ -9,7 +9,7 @@ pydantic_core==2.41.5
 transformers
 huggingface_hub
 torch --index-url https://download.pytorch.org/whl/cpu
-
+prophet
 
 scikit-learn==1.8.0
 numpy==2.4.3

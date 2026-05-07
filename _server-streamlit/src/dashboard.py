@@ -8,7 +8,7 @@ import pandas as pd
 # ========================================
 # Configure the Streamlit app
 st.set_page_config(
-    page_title="📰 The Guardian - Sentiment Analysis Management Tool",
+    page_title="The Guardian - Sentiment Analysis Management Tool",
     page_icon="📰",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -28,14 +28,16 @@ load_css(css_file)
 
 st.sidebar.markdown("---")
 
-# Navigation with buttons
+# ========================================
+# MENU
+# ========================================
 st.sidebar.markdown("### 🚢 Navigation")
 
 # Dictionary of pages modules
 d_modules = {
     "Predict": ("🔮", "modules.module_predict"),
-    "Transactions": ("🔍", "modules.module_transactions"),
-    #"Admin": ("🗃️", "modules.module_admin")
+    "Trend": ("🔍", "modules.module_trend"),
+    "Admin": ("🗃️", "modules.module_admin")
 }
 # Initialize default page
 if "page" not in st.session_state:
@@ -50,7 +52,7 @@ for label, (emoji, module_page) in d_modules.items():
     if st.sidebar.button(
         btn_label,
         key=f"nav_{label}",
-        use_container_width=True,
+        width="stretch",
         type="primary" if is_active else "secondary"
     ):
         #width='stretch'):
@@ -60,6 +62,9 @@ for label, (emoji, module_page) in d_modules.items():
 
 st.sidebar.markdown("---")
 
+# ========================================
+# API HEALTH CHECK
+# ========================================
 from utils.api import get_health
 try:
     health_status = get_health()

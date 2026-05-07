@@ -13,25 +13,15 @@ def predict(payload: dict) -> dict:
     return resp.json()
 
 
+def get_trend() -> dict:
+    resp = requests.get(f"{URL_API}/trend")
+    resp.raise_for_status()
+    return resp.json()
 
 
-
-
-
-
-
-
-
-def get_pending_from_cache():
-    return requests.get(f"{URL_API}/transactions/pending").json()
-
-def validate(trans_num: str, label: int):
-    return requests.patch(f"{URL_API}/transactions/{trans_num}", json={"label": label}).json()
-
-
-
-def inject_drift(params: dict):
-    return requests.post(f"{URL_API}/admin/inject-drift", json=params).json()
-
-def purge():
-    return requests.post(f"{URL_API}/admin/purge").json()
+def get_trend_by_date(run_date) -> dict:
+    resp = requests.get(f"{URL_API}/trend/{run_date}")
+    if resp.status_code == 404:
+        return {}
+    resp.raise_for_status()
+    return resp.json()

@@ -45,6 +45,7 @@ services:
       - PROJECT_ROOT=/app
       - PROJECT_NAME=${PROJECT_NAME}
       - CACHE_DIR=${CACHE_DIR}
+      - GIT_PYTHON_REFRESH=quiet                     # Silencer for MLFlow when run by worker
       - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}  # Load model
       - MODEL_NAME=${MODEL_NAME}                    # Load model
       - MODEL_ALIAS=${MODEL_ALIAS}                  # Load model
@@ -57,6 +58,8 @@ services:
       - DB_PORT=${DB_PORT}
       - DB_NAME=${DB_NAME}
       - DB_SCHEMA=${DB_SCHEMA}
+      - WORKERS_PATH=/home/user/app/_workers
+      - WORKERS_LOGS_PATH=/home/user/logs
     # Networking & volumes
     networks:
       - ${PROJECT_NAME}-network
@@ -65,6 +68,8 @@ services:
     volumes:
       - ./_server-fastapi/src:/home/user/app/src           # allows API hot reload
       - ./pipeline:/home/user/app/pipeline             # access pipeline/ functions
+      - ./_workers:/home/user/app/_workers             # access to workers
+      - ./logs:/home/user/logs                         # access to workers logs
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${PORT_FASTAPI_EXPOSED}/health"]
       interval: 10s

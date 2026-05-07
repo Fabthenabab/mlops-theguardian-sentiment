@@ -426,7 +426,7 @@ Si un fine-tuning était introduit, le lifespan devrait être étendu pour charg
 
 ---
 # ADR-011 — Persistance des forecasts Prophet en base
-
+Date : 2026-05-06
 ## Contexte
 
 `worker_prophet` entraîne Prophet et logue le modèle dans MLflow.
@@ -467,3 +467,46 @@ La requête SQL sélectionne le run_id dont la run_date est la plus récente inf
 ## Lien MLflow
 
 run_id est stocké dans chaque ligne de forecast — la prévision reste liée à son run MLflow pour traçabilité, sans en dépendre pour le serving.
+
+
+---
+# ADR-012 — Simulation de drift pour les tests Evidently
+Date : 2026-05-06
+## Contexte
+
+Pour tester le pipeline de détection de drift et de réentraînement
+sans attendre une dérive naturelle des données, il faut pouvoir
+injecter un drift artificiel dans la base.
+
+## Décision : injection via articles fictifs préfixés drift_
+
+Les articles fictifs sont insérés dans theguardian.articles
+avec un id préfixé drift_<incrément> et des valeurs extrêmes :
+- sentiment_label : positive
+- sentiment_score : 1.0
+- date : depuis la dernière date connue en base
+
+Ces valeurs créent un biais statistique détectable par Evidently
+sur la distribution de sentiment_label et sentiment_score.
+
+## Rollback
+
+Suppression triviale par préfixe — pas de backup nécessaire :
+
+DELETE FROM theguardian.articles WHERE id LIKE 'drift_%';
+
+Un endpoint FastAPI expose cette opération :
+POST /admin/rollback
+
+## Ce que ça permet de tester
+
+- Evidently détecte le drift sur la distribution des scores
+- dag_monitor déclenche worker_prophet --retrain evidently_drift
+- Le rapport Evidently est sauvegardé sur S3
+- L'UI admin affiche le rapport
+
+## Limite
+
+Le drift injecté est volontairement grossier (score=1.0 systématique)
+— il ne simule pas un drift subtil de production mais suffit
+à valider le pipeline de détection et de réentraînement.

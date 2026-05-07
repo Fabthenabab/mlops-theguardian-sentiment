@@ -22,6 +22,9 @@ creds/
 # Temporary dirs
 mnt
 
+# Logs
+logs
+
 # Data
 data
 
@@ -33,7 +36,7 @@ docs/plan.txt
 assets/externals
 
 # Notebooks
-notebooks/01_setup.ipynb
+#notebooks
 sandbox.ipynb
 
 # Jupyter Notebook checkpoints

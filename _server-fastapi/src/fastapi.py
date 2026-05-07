@@ -87,11 +87,10 @@ from .route_trend import trend_router
 app.include_router(trend_router)
 
 
-
 # ************************************************************************************************************
 # Include router
-#from .route_ingest import ingest_router
-#app.include_router(ingest_router)
+from .route_run import run_router
+app.include_router(run_router)
 
 # ************************************************************************************************************
 # Include router

@@ -5,6 +5,13 @@ server {
 
     listen ${PORT_NGINX_EXTERNAL};
 
+    proxy_intercept_errors on;
+    error_page 404 = @not_found;
+    location @not_found {
+        default_type text/html;
+        return 404 "<h1>404</h1>";
+    }
+    
     location / {
         # Configuration index.html
         root /var/www/html;
