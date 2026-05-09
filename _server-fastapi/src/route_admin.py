@@ -1,100 +1,105 @@
+# _server-fastapi/src/route_admin.py
+
 import os
+
+# ===============================
+# Logging
+# ================================
+import logging
+
+logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(name)s: %(message)s')
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+
+# ===============================
+# Router
+# ===============================
 from fastapi import APIRouter
-
-from fastapi import Body
-from pipeline.core.src.sql import get_engine, inject_drift, drift_report, rollback_drift
-
-from pipeline.core.src.drift_generator import generate_drift_batch
-
-
 admin_router = APIRouter()
+
 
 
 # ===============================
 # Pydantic
-# ================================
+# ===============================
+from fastapi import Request
+from pydantic import BaseModel
 
-from pydantic import BaseModel, ConfigDict, Field
+# Input
+class InjectDriftRequest(BaseModel):
+    n: int = 100
+
+# Output
+class InjectDriftResponse(BaseModel):
+    inserted: int
+    message:  str
 
 
-class InjectDriftParams(BaseModel):
-    n: int = Field(100, description="Number of rows to generate")
-    amt_multiplier: float = Field(5.0, description="Shift amount multiplier")
-    fraud_ratio: float = Field(0.3, description="Proportion of label=1")
-    force_category: str = Field("shopping_net", description="Concentrate on one category")
-    force_state: str = Field("AK", description="Concentrate on one state")
+class RollbackResponse(BaseModel):
+    deleted: int
+    message: str
 
-    model_config = ConfigDict(
-        json_schema_extra={
-            "examples": [
-                {
-                    "n": 50,
-                    "amt_multiplier": 8.0,
-                    "fraud_ratio": 0.5,
-                    "force_category": "shopping_net",
-                    "force_state": "AK",
-                }
-            ]
-        }
-    )
+
+class DriftReportResponse(BaseModel):
+    run_id:      str | None
+    run_date:    str | None
+    mode:        str | None
+    drift:       bool | None
+    drift_score: float | None
+
 
 
 # ===============================
-# Entry points
-# ================================
-_INJECT_DRIFT_DESC = """
-Generate and inject synthetic drifted transactions into validated.
-```bash
-curl -X POST http://localhost:9000/admin/inject-drift \\
-  -H "Content-Type: application/json" \\
-  -d '{{"n": 5, "amt_multiplier": 8.0, "fraud_ratio": 0.5}}'
-```
-"""
+# Admin entry point
+# ===============================
+from pipeline.core.src.sql import get_engine, inject_drift, rollback_drift, fetch_monitor_by_run_id
 
+engine = get_engine()
 
-@admin_router.post(
-    "/admin/inject-drift",
-    summary="Inject synthetic drifted transactions",
-    description=_INJECT_DRIFT_DESC,
-)
-async def ep_inject_drift(params: InjectDriftParams):
-    """
-    Generate and inject synthetic drifted transactions into validated.
-    
-    Params:
-        n: number of rows (default 100)
-        amt_multiplier: shift amount (default 5.0)
-        fraud_ratio: proportion of label=1 (default 0.3)
-        force_category: concentrate on one category (default shopping_net)
-        force_state: concentrate on one state (default AK)
-    """
-    engine = get_engine()
-    rows = generate_drift_batch(
-        engine=engine,
-        n=params.n,
-        amt_multiplier=params.amt_multiplier,
-        fraud_ratio=params.fraud_ratio,
-        force_category=params.force_category,
-        force_state=params.force_state,
+# ──────────────────────────────────────────────
+#  POST /admin/inject-drift
+# ──────────────────────────────────────────────
+
+@admin_router.post("/admin/inject-drift", response_model=InjectDriftResponse)
+async def ep_inject_drift(body: InjectDriftRequest = InjectDriftRequest()):
+    logger.info(f"function ep_inject_drift — n: {body.n}")
+    inserted = inject_drift(engine, n=body.n)
+    return InjectDriftResponse(
+        inserted=inserted,
+        message=f"{inserted} drift articles injected"
     )
-    if not rows:
-        return {"status": "error", "detail": "No validated data to base drift on"}
-
-    inject_drift(engine, rows)
-
-    return {
-        "status": "injected",
-        "n_rows": len(rows),
-        "params": {
-            "amt_multiplier": params.amt_multiplier,
-            "fraud_ratio": params.fraud_ratio,
-            "force_category": params.force_category,
-            "force_state": params.force_state,
-        },
-    }
 
 
+# ──────────────────────────────────────────────
+#  POST /admin/rollback-drift
+# ──────────────────────────────────────────────
 
-@admin_router.post("/admin/purge", include_in_schema=False)
-async def purge():
-    return {"status": "purged"}
+@admin_router.post("/admin/rollback-drift", response_model=RollbackResponse)
+async def ep_rollback_drift():
+    logger.info("function ep_rollback_drift")
+    deleted = rollback_drift(engine)
+    return RollbackResponse(
+        deleted=deleted,
+        message=f"{deleted} drift articles removed"
+    )
+
+
+# ──────────────────────────────────────────────
+#  GET /admin/drift-report
+# ──────────────────────────────────────────────
+
+@admin_router.get("/admin/drift-report/{run_id}", response_model=DriftReportResponse)
+async def ep_drift_report(run_id: str):
+    logger.info("function ep_drift_report")
+    logger.info(f"Evidently report for run_id: {run_id}")
+    report = fetch_monitor_by_run_id(engine, run_id=run_id)
+    if not report:
+        raise HTTPException(status_code=404, detail=f"No drift report found for run_id: {run_id}")
+    return DriftReportResponse(
+        run_id      = report.get("run_id"),
+        run_date    = str(report.get("run_date")),
+        mode        = report.get("mode"),
+        drift       = report.get("drift"),
+        drift_score = report.get("drift_score")
+    )

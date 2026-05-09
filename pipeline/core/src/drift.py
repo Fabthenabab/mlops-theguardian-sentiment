@@ -74,24 +74,25 @@ def compute_drift(current: pd.DataFrame, reference: pd.DataFrame) -> dict:
 
     result = report.as_dict()
 
-    drift_by_column = result["metrics"][0]["result"].get("drift_by_columns", {})
+    # DatasetDriftMetric — premier metric
+    dataset_metric = next(
+        m for m in result["metrics"]
+        if m["metric"] == "DatasetDriftMetric"
+    )["result"]
 
-    score_label = drift_by_column.get("sentiment_label", {}).get("drift_score", 0.0)
-    score_score = drift_by_column.get("sentiment_score", {}).get("drift_score", 0.0)
+    drift       = dataset_metric["dataset_drift"]
+    drift_score = dataset_metric["share_of_drifted_columns"]
 
-    drift_score = max(score_label, score_score)
-    drift = (
-        score_label > DRIFT_THRESHOLD_LABEL or
-        score_score > DRIFT_THRESHOLD_SCORE
+    logger.info(
+        f"Drift — share_drifted: {drift_score:.3f} (thr: {DRIFT_THRESHOLD_SCORE}) | drift: {drift}"
     )
-
-    logger.info(f"Drift — label: {score_label} (thr: {DRIFT_THRESHOLD_LABEL}) | score: {score_score} (thr: {DRIFT_THRESHOLD_SCORE}) | drift: {drift}")
 
     return {
         "drift":       drift,
         "drift_score": drift_score,
         "details": {
-            "sentiment_label": score_label,
-            "sentiment_score": score_score
+            "number_of_drifted_columns": dataset_metric["number_of_drifted_columns"],
+            "number_of_columns":         dataset_metric["number_of_columns"],
+            "drift_share":               dataset_metric["drift_share"]
         }
     }

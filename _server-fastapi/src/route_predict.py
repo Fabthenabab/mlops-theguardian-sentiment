@@ -51,6 +51,7 @@ class ArticlesPredicted(BaseModel):
 # ===============================
 @predict_router.post("/predict", response_model=ArticlesPredicted, include_in_schema=True)
 async def ep_predict(request: Request, body: Articles) -> dict:
+    logger.debug(f"function ep_predict")
     pipe = request.app.state.ml_models["finbert"]
     results = []
     

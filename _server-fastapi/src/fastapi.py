@@ -94,8 +94,8 @@ app.include_router(run_router)
 
 # ************************************************************************************************************
 # Include router
-#from .route_admin import admin_router
-#app.include_router(admin_router)
+from .route_admin import admin_router
+app.include_router(admin_router)
 
 # ************************************************************************************************************
 # Include router

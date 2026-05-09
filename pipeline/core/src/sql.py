@@ -531,6 +531,24 @@ def fetch_last_monitor(engine, schema=DB_SCHEMA) -> dict:
     return dict(row._mapping)
 
 
+def fetch_monitor_by_run_id(engine, run_id: str, schema=DB_SCHEMA) -> dict:
+    """Return a monitor run result by run_id."""
+    logger.debug("function fetch_monitor_by_run_id")
+    stmt = text(f"""
+        SELECT id, run_id, run_date, mode, drift, drift_score, created_at
+        FROM {schema}.monitor
+        WHERE run_id = :run_id
+        LIMIT 1
+    """)
+    with engine.connect() as conn:
+        row = conn.execute(stmt, {"run_id": run_id}).fetchone()
+
+    if row is None:
+        return {}
+
+    return dict(row._mapping)
+
+
 # ──────────────────────────────────────────────
 #  DRIFT
 # ──────────────────────────────────────────────
