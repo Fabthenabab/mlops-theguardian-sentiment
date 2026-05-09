@@ -66,7 +66,12 @@ engine = get_engine()
 # ──────────────────────────────────────────────
 
 def _launch(worker: str, cmd: list) -> RunResponse:
-    logger.info("function _launch")
+    '''
+    Factorize commune operations for different entry point
+    
+    '''
+    
+    logger.debug("function _launch")
     # Define unique id process for worker process
     job_id = str(uuid.uuid4())
 
@@ -99,7 +104,7 @@ def _launch(worker: str, cmd: list) -> RunResponse:
 async def ep_run_transformers(
     limit: int = Query(default=None, description="Process N articles only (for testing)")
 ):
-    logger.info("function ep_run_transformers")
+    logger.debug("function ep_run_transformers")
     cmd = [
         "python",
         os.path.join(WORKERS_PATH, "transformers_worker.py")
@@ -117,13 +122,31 @@ async def ep_run_transformers(
 async def ep_run_prophet(
     retrain: Literal["scheduled", "evidently_drift"] = Query(default="scheduled")
 ):
-    logger.info("function ep_run_prophet")
+    logger.debug("function ep_run_prophet")
     cmd = [
         "python",
         os.path.join(WORKERS_PATH, "prophet_worker.py"),
         "--retrain", retrain
     ]
     return _launch("prophet", cmd)
+
+
+# ──────────────────────────────────────────────
+#  /run/monitor
+# ──────────────────────────────────────────────
+
+@run_router.post("/run/monitor", response_model=RunResponse)
+async def ep_run_monitor(
+    mode: Literal["snapshot", "compare"] = Query(default="snapshot")
+):
+    logger.debug("function ep_run_monitor")
+    cmd = [
+        "python",
+        os.path.join(WORKERS_PATH, "monitor_worker.py"),
+        "--mode", mode
+    ]
+    return _launch("monitor", cmd)
+
 
 # ──────────────────────────────────────────────
 #  /status/{job_id}
@@ -132,6 +155,10 @@ async def ep_run_prophet(
 @run_router.get("/status/{job_id}", response_model=StatusResponse)
 async def ep_get_status(job_id: str):
     job = fetch_job(engine, job_id=job_id)
+    # fetch_job returns job dict wtih keys = cols: job_id, worker, status, started_at, finished_at, error, articles_processed
+    # StatusResponse is built directly from these columns (as keys) and their values
+    # if value is None, leave it as None
+    # Unpack every Key/value of job to populate variables of StatusResponse model
     if not job:
         raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
     return StatusResponse(**{k: str(v) if v is not None else None for k, v in job.items()})

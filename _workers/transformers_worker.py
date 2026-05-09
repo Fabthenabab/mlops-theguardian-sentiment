@@ -82,7 +82,7 @@ def run(batch_size: int = 32, limit: int = None):
             update_job(engine, JOB_ID, "done",
                       finished_at=datetime.datetime.now(datetime.UTC),
                       articles_processed=processed)
-        logger.info(f"worker_transformers done — {total} articles processed")
+        logger.info(f"transformers_worker done — {total} articles processed")
     
     except Exception as e:
         if JOB_ID:

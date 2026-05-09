@@ -9,7 +9,7 @@ import os
 import logging
 
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(name)s: %(message)s')
-logger = logging.getLogger("pipeline_theguardian")
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
@@ -25,6 +25,7 @@ def fetch_archives(year: int, month: int) -> pd.DataFrame:
     Returns:
         pd.DataFrame with all articles for that month (json_normalize applied)
     """
+    logger.debug("function fetch_archives")
     from calendar import monthrange
 
     THEGUARDIAN_API_KEY = os.getenv("THEGUARDIAN_API_KEY")

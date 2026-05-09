@@ -10,6 +10,7 @@ transformers
 huggingface_hub
 torch --index-url https://download.pytorch.org/whl/cpu
 prophet
+evidently==0.4.33
 
 scikit-learn==1.8.0
 numpy==2.4.3

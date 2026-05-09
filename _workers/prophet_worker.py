@@ -12,7 +12,7 @@ from pipeline.core.src.sql import get_engine
 # LOGGING
 # ===========================
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(name)s: %(message)s')
-logger = logging.getLogger("worker_prophet")
+logger = logging.getLogger("prophet_worker")
 
 
 # ===========================
@@ -96,7 +96,7 @@ def run(retrain, horizon_days: int = HORIZON_DAYS):
             forecast = model.predict(future)
             forecast["label"] = "economic_sentiment"
 
-            # Métriques
+            # Metrics
             from sklearn.metrics import mean_absolute_error
             fitted = forecast.loc[forecast["ds"].isin(weekly["ds"]), "yhat"]
             mae    = mean_absolute_error(weekly["y"], fitted)
@@ -107,13 +107,13 @@ def run(retrain, horizon_days: int = HORIZON_DAYS):
             mlflow.log_param("history_end",    str(weekly["ds"].max()))
             mlflow.log_metric("mae",           mae)
             
-            # Log du modèle sans enregistrement direct dans le registre
+            # Log model without registering in registry
             mlflow.prophet.log_model(model, name=MODEL_NAME)
             run_id = mlflow.active_run().info.run_id
             
             
             # WRITE PROPHET FORECASTS
-            # Persits predictions for this run_id in Database
+            # Persist predictions for this run_id in Database
             from pipeline.core.src.sql import write_forecasts
             import datetime
             run_date = datetime.date.today()
@@ -122,7 +122,7 @@ def run(retrain, horizon_days: int = HORIZON_DAYS):
             # Set tag
             mlflow.set_tag("triggered_by", retrain)
             
-            # Enregistrement séparé
+            # Register model
             model_uri = f"runs:/{run_id}/{MODEL_NAME}"
             mv = mlflow.register_model(model_uri, name=MODEL_NAME)
 
@@ -139,7 +139,7 @@ def run(retrain, horizon_days: int = HORIZON_DAYS):
                 update_job(engine, JOB_ID, "done",
                         finished_at=datetime.datetime.now(datetime.UTC),
                         articles_processed=len(articles))
-        logger.info("worker_prophet done")
+        logger.info("prophet_worker done")
     
     except Exception as e:
         if JOB_ID:
@@ -155,7 +155,7 @@ def run(retrain, horizon_days: int = HORIZON_DAYS):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    # retrain pour stocker la condition du retrain dans mlflow : retrain sur trigger evidently ou retrain sur scheduled
+    # retrain used to store the condtion of retrain in mlflow : retrain because of trigger by evidently or retrain because of schedule
     # retrain need to be passed as "scheduled" or "evidently_drift"
     parser.add_argument(
         "--retrain",

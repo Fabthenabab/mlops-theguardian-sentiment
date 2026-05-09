@@ -6,7 +6,7 @@ import os
 import logging
 
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(name)s: %(message)s')
-logger = logging.getLogger("pipeline_sql")
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # ===============================
@@ -34,6 +34,7 @@ from sqlalchemy import create_engine, text
 
 def get_engine():
     """Return a SQLAlchemy engine connected to Neon PostgreSQL."""
+    logger.debug(f"function get_engine")
     endpoint_id = DB_HOST.split(".")[0] if DB_HOST else None
     url = (
         f"postgresql://{DB_USERNAME}:{DB_PASSWORD}"
@@ -41,7 +42,7 @@ def get_engine():
         f"?sslmode=require&options=endpoint%3D{endpoint_id}"
     )
     engine = create_engine(url, pool_pre_ping=True)
-    logger.info("Engine created — %s@%s/%s", DB_USERNAME, DB_HOST, DB_NAME)
+    logger.info(f"Engine created — {DB_USERNAME}@{DB_HOST}/DB_NAME")
     return engine
 
 
@@ -76,21 +77,22 @@ def create_schema(engine, schema=DB_SCHEMA):
     """Drop schema if exists, then recreate it clean."""
     with engine.begin() as conn:
         conn.execute(text(f"DROP SCHEMA IF EXISTS {schema} CASCADE"))
-        logger.info("Dropped schema %s", schema)
+        logger.info(f"Dropped schema {schema}")
         conn.execute(text(f"CREATE SCHEMA {schema}"))
-        logger.info("Created schema %s", schema)
+        logger.info(f"Created schema {schema}")
 
 
 # Initial creation
 def create_tables(engine, schema=DB_SCHEMA):
     """Drop then create tables + respective indexes in TABLES_SQL + INDEXES_SQL."""
+    logger.debug(f"function create_tables")
     with engine.begin() as conn:
         for name in reversed(list(TABLES_SQL.keys())):
             conn.execute(text(f"DROP TABLE IF EXISTS {schema}.{name} CASCADE"))
-            logger.info("Dropped table: %s.%s", schema, name)
+            logger.info(f"Dropped table: {schema}.{name}")
         for name, ddl in TABLES_SQL.items():
             conn.execute(text(ddl.format(schema=schema)))
-            logger.info("Created table: %s.%s", schema, name)
+            logger.info(f"Created table:  {schema}.{name}")
         for idx in INDEXES_SQL:
             conn.execute(text(idx.format(schema=schema)))
         logger.info("Indexes ready")
@@ -99,6 +101,7 @@ def create_tables(engine, schema=DB_SCHEMA):
 # New table creation - Done separately because we don't want to re-receate everything (and drop tables first..)
 def create_table_forecasts(engine, schema=DB_SCHEMA):
     """Create theguardian.forecasts table if not exists."""
+    logger.debug(f"function create_table_forecasts")
     stmt = text(f"""
         CREATE TABLE IF NOT EXISTS {schema}.forecasts (
             id         SERIAL PRIMARY KEY,
@@ -113,11 +116,13 @@ def create_table_forecasts(engine, schema=DB_SCHEMA):
     """)
     with engine.begin() as conn:
         conn.execute(stmt)
-    logger.info("Table ready: %s.forecasts", schema)
+    logger.info(f"Table ready: {schema}.forecasts")
+
 
 # New table creation - Done separately because we don't want to re-receate everything (and drop tables first..)
 def create_table_jobs(engine, schema=DB_SCHEMA):
     """Create theguardian.jobs table if not exists."""
+    logger.debug(f"function create_table_jobs")
     stmt = text(f"""
         CREATE TABLE IF NOT EXISTS {schema}.jobs (
             job_id             VARCHAR(36) PRIMARY KEY,
@@ -131,15 +136,38 @@ def create_table_jobs(engine, schema=DB_SCHEMA):
     """)
     with engine.begin() as conn:
         conn.execute(stmt)
-    logger.info("Table ready: %s.jobs", schema)
+    logger.info(f"Table ready: {schema}.jobs")
+
+
+# New table creation - Done separately because we don't want to re-receate everything (and drop tables first..)
+def create_table_monitor(engine, schema=DB_SCHEMA):
+    """Create theguardian.monitor table if not exists."""
+    logger.debug(f"function create_table_monitor")
+    stmt = text(f"""
+        CREATE TABLE IF NOT EXISTS {schema}.monitor (
+            id          SERIAL PRIMARY KEY,
+            run_id      VARCHAR(36),
+            run_date    DATE,
+            mode        VARCHAR(10),
+            drift       BOOLEAN,
+            drift_score FLOAT,
+            created_at  TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'utc')
+        )
+    """)
+    with engine.begin() as conn:
+        conn.execute(stmt)
+    logger.info(f"Table ready: {schema}.monitor")
 
 
 def init_db(engine=None, schema=DB_SCHEMA):
     """Drop everything, recreate schema + tables."""
+    logger.debug(f"function init_db")
     engine = engine or get_engine()
     create_schema(engine, schema)
     create_tables(engine, schema)
     #create_table_forecasts(engine, schema)
+    #create_table_jobs(engine, schema)
+    #create_table_monitor(engine, schema)
     return engine
 
 # ──────────────────────────────────────────────
@@ -154,7 +182,7 @@ def transform_articles(df: pd.DataFrame) -> pd.DataFrame:
     Sentiment columns (sentiment_label, sentiment_score) are left absent —
     they will be filled later by the FinBERT worker.
     """
-    logger.info("function transform_articles")
+    logger.debug("function transform_articles")
     df = df.copy()
 
     expected_cols = ["id", "webPublicationDate", "webTitle", "fields.trailText", "fields.bodyText"]
@@ -186,7 +214,7 @@ def insert_articles(engine, df: pd.DataFrame, schema=DB_SCHEMA) -> int:
     Returns:
         Number of rows inserted.
     """
-    logger.info("function insert_articles")
+    logger.debug("function insert_articles")
     if df.empty:
         logger.info("insert_articles: empty DataFrame, nothing to insert")
         return 0
@@ -202,7 +230,7 @@ def insert_articles(engine, df: pd.DataFrame, schema=DB_SCHEMA) -> int:
         result = conn.execute(stmt, rows)
 
     inserted = result.rowcount
-    logger.info("Inserted %d / %d rows into %s.articles", inserted, len(df), schema)
+    logger.info(f"Inserted {inserted} / {len(df)} rows into {schema}.articles")
     return inserted
 
 
@@ -212,7 +240,7 @@ def update_sentiment(engine, id: str, label: str, score: float, schema=DB_SCHEMA
 
     Called by the FinBERT worker after inference.
     """
-    logger.info("function update_sentiment")
+    logger.debug("function update_sentiment")
     stmt = text(f"""
         UPDATE {schema}.articles
         SET sentiment_label = :label,
@@ -230,7 +258,7 @@ def update_sentiment_batch(engine, records: list[dict], schema=DB_SCHEMA):
     Args:
         records : list of dicts with keys [id, label, score]
     """
-    logger.info("function update_sentiment_batch")
+    logger.debug("function update_sentiment_batch")
     if not records:
         return
 
@@ -243,7 +271,7 @@ def update_sentiment_batch(engine, records: list[dict], schema=DB_SCHEMA):
     with engine.begin() as conn:
         conn.execute(stmt, records)
 
-    logger.info("Updated sentiment for %d articles in %s.articles", len(records), schema)
+    logger.info(f"Updated sentiment for {len(records)} articles in {schema}.articles")
 
 
 
@@ -253,7 +281,7 @@ def fetch_unprocessed(engine, schema=DB_SCHEMA) -> pd.DataFrame:
     """
     Return articles not yet processed by FinBERT (sentiment_label IS NULL).
     """
-    logger.info("function fetch_unprocessed")
+    logger.debug("function fetch_unprocessed")
     stmt = text(f"""
         SELECT id, text
         FROM {schema}.articles
@@ -263,7 +291,7 @@ def fetch_unprocessed(engine, schema=DB_SCHEMA) -> pd.DataFrame:
     with engine.connect() as conn:
         df = pd.read_sql(stmt, conn)
 
-    logger.info("Fetched %d unprocessed articles from %s.articles", len(df), schema)
+    logger.info(f"Fetched {len(df)} unprocessed articles from {schema}.articles")
     return df
 
 
@@ -273,7 +301,7 @@ def fetch_processed(engine, schema=DB_SCHEMA) -> pd.DataFrame:
     """
     Return articles already processed by FinBERT (sentiment_label IS NOT NULL).
     """
-    logger.info("function fetch_processed")
+    logger.debug("function fetch_processed")
     stmt = text(f"""
         SELECT *
         FROM {schema}.articles
@@ -283,7 +311,27 @@ def fetch_processed(engine, schema=DB_SCHEMA) -> pd.DataFrame:
     with engine.connect() as conn:
         df = pd.read_sql(stmt, conn)
 
-    logger.info("Fetched %d already processed articles from %s.articles", len(df), schema)
+    logger.info(f"Fetched {len(df)} already processed articles from {schema}.articles")
+    return df
+
+#  Fetch (pour monitor)
+
+def fetch_processed_for_drift(engine, days: int = 90, schema=DB_SCHEMA) -> pd.DataFrame:
+    """
+    Return processed articles over a sliding window.
+    Used by worker_monitor for snapshot and compare.
+    """
+    logger.debug("function fetch_processed_for_drift")
+    stmt = text(f"""
+        SELECT sentiment_label, sentiment_score
+        FROM {schema}.articles
+        WHERE sentiment_label IS NOT NULL
+        AND date >= CURRENT_DATE - INTERVAL '{days} days'
+        ORDER BY date
+    """)
+    with engine.connect() as conn:
+        df = pd.read_sql(stmt, conn)
+    logger.info(f"Fetched {len(df)} articles over {days} days window")
     return df
 
 
@@ -305,7 +353,7 @@ def write_forecasts(engine, forecast: pd.DataFrame, run_id: str, run_date, schem
     Returns:
         Number of rows written.
     """
-    logger.info("function write_forecasts")
+    logger.debug("function write_forecasts")
     if forecast.empty:
         logger.info("write_forecasts: empty DataFrame, nothing to write")
         return 0
@@ -325,7 +373,7 @@ def write_forecasts(engine, forecast: pd.DataFrame, run_id: str, run_date, schem
     with engine.begin() as conn:
         conn.execute(stmt, rows)
 
-    logger.info("Wrote %d forecast rows into %s.forecasts (run_id: %s)", len(df), schema, run_id)
+    logger.info(f"Wrote {len(df)} forecast rows into {schema}.forecasts (run_id: {run_id})")
     return len(df)
 
 
@@ -342,7 +390,7 @@ def fetch_forecasts(engine, run_date=None, schema=DB_SCHEMA) -> pd.DataFrame:
     Returns:
         DataFrame with columns [ds, yhat, yhat_lower, yhat_upper, run_id, run_date]
     """
-    logger.info("function fetch_forecasts")
+    logger.debug("function fetch_forecasts")
     # Get the last run if no date is provided
     if run_date is None:
         subquery = f"""
@@ -378,7 +426,7 @@ def fetch_forecasts(engine, run_date=None, schema=DB_SCHEMA) -> pd.DataFrame:
 
 def create_job(engine, job_id: str, worker: str, schema=DB_SCHEMA):
     """Insert a new job with status 'started'."""
-    logger.info("function create_job")
+    logger.debug("function create_job")
     stmt = text(f"""
         INSERT INTO {schema}.jobs (job_id, worker, status)
         VALUES (:job_id, :worker, 'started')
@@ -393,7 +441,7 @@ def update_job(engine, job_id: str, status: str, schema=DB_SCHEMA, **kwargs):
     Update job status and optional fields.
     kwargs: finished_at, error, articles_processed
     """
-    logger.info("function update_job")
+    logger.debug("function update_job")
     fields = {"status": status}
     fields.update(kwargs)
 
@@ -412,7 +460,7 @@ def update_job(engine, job_id: str, status: str, schema=DB_SCHEMA, **kwargs):
 
 def fetch_job(engine, job_id: str, schema=DB_SCHEMA) -> dict:
     """Return job status as dict."""
-    logger.info("function fetch_job")
+    logger.debug("function fetch_job")
     stmt = text(f"""
         SELECT job_id, worker, status, started_at, finished_at,
                error, articles_processed
@@ -426,3 +474,135 @@ def fetch_job(engine, job_id: str, schema=DB_SCHEMA) -> dict:
         return {}
 
     return dict(row._mapping)
+
+
+# ──────────────────────────────────────────────
+#  MONITOR
+# ──────────────────────────────────────────────
+def write_monitor(engine, run_id: str, mode: str,
+                  drift: bool, drift_score: float,
+                  schema=DB_SCHEMA):
+    """
+    Write a monitor run result into theguardian.monitor.
+
+    Args:
+        run_id      : job_id from theguardian.jobs
+        mode        : snapshot | compare
+        drift       : drift detected yes/no
+        drift_score : Evidently drift score
+    """
+    logger.debug("function write_monitor")
+    import datetime
+    stmt = text(f"""
+        INSERT INTO {schema}.monitor (run_id, run_date, mode, drift, drift_score)
+        VALUES (:run_id, :run_date, :mode, :drift, :drift_score)
+    """)
+    with engine.begin() as conn:
+        conn.execute(stmt, {
+            "run_id":      run_id,
+            "run_date":    datetime.date.today(),
+            "mode":        mode,
+            "drift":       drift,
+            "drift_score": drift_score
+        })
+    logger.info(f"Monitor written: mode={mode} drift={drift} score={drift_score}")
+
+
+def fetch_last_monitor(engine, schema=DB_SCHEMA) -> dict:
+    """
+    Return the last compare run result from theguardian.monitor.
+    Used by dag_monitor to decide whether to retrain Prophet,
+    and by /admin/drift-report to display the last report.
+    """
+    logger.debug("function fetch_last_monitor")
+    stmt = text(f"""
+        SELECT id, run_id, run_date, mode, drift, drift_score, created_at
+        FROM {schema}.monitor
+        WHERE mode = 'compare'
+        ORDER BY created_at DESC
+        LIMIT 1
+    """)
+    with engine.connect() as conn:
+        row = conn.execute(stmt).fetchone()
+
+    if row is None:
+        return {}
+
+    return dict(row._mapping)
+
+
+# ──────────────────────────────────────────────
+#  DRIFT
+# ──────────────────────────────────────────────
+def inject_drift(engine, n: int = 100, schema=DB_SCHEMA) -> int:
+    """
+    Inject artificial drift by inserting fake articles with extreme sentiment.
+    Articles are prefixed with 'drift_' for easy rollback.
+
+    Args:
+        engine : SQLAlchemy engine
+        n      : number of fake articles to insert
+        schema : target schema
+
+    Returns:
+        Number of rows inserted.
+    """
+    logger.debug("function inject_drift")
+    import datetime
+
+    # Last known date in base
+    stmt_last_date = text(f"""
+        SELECT MAX(date) FROM {schema}.articles
+        WHERE id NOT LIKE 'drift_%'
+    """)
+    with engine.connect() as conn:
+        last_date = conn.execute(stmt_last_date).scalar()
+
+    if last_date is None:
+        last_date = datetime.date.today()
+
+    # Generate fake articles from last_date
+    rows = [
+        {
+            "id":              f"drift_{i:05d}",
+            "date":            last_date + datetime.timedelta(days=i),
+            "text":            f"Drift injection article {i}. The economy is booming.",
+            "sentiment_label": "positive",
+            "sentiment_score": 1.0
+        }
+        for i in range(1, n + 1)
+    ]
+
+    stmt = text(f"""
+        INSERT INTO {schema}.articles (id, date, text, sentiment_label, sentiment_score)
+        VALUES (:id, :date, :text, :sentiment_label, :sentiment_score)
+        ON CONFLICT (id) DO NOTHING
+    """)
+
+    with engine.begin() as conn:
+        conn.execute(stmt, rows)
+
+    logger.info(f"Injected {n} drift articles into {schema}.articles")
+    return n
+
+
+
+def rollback_drift(engine, schema=DB_SCHEMA) -> int:
+    """
+    Remove all drift-injected articles from theguardian.articles.
+    Identifies drift articles by id prefix 'drift_'.
+
+    Returns:
+        Number of rows deleted.
+    """
+    logger.debug("function rollback_drift")
+    stmt = text(f"""
+        DELETE FROM {schema}.articles
+        WHERE id LIKE 'drift_%'
+    """)
+    with engine.begin() as conn:
+        result = conn.execute(stmt)
+
+    deleted = result.rowcount
+    logger.info(f"Rolled back {deleted} drift articles from {schema}.articles")
+    return deleted
