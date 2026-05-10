@@ -54,7 +54,7 @@ def run(mode):
             last_processed = fetch_processed_for_drift(engine=engine, days=REFERENCE_WINDOW_DAYS, schema=SCHEMA)
             # Save to S3 via drift module 
             save_reference(last_processed)
-            write_monitor(engine, run_id=JOB_ID or "manual",
+            write_monitor(engine, job_id=JOB_ID or "manual",
                         mode="snapshot", drift=False, drift_score=0.0)
             
         else:
@@ -70,7 +70,7 @@ def run(mode):
             reference = load_reference()
             # Compute drift
             compute_result = compute_drift(last_processed, reference)
-            write_monitor(engine, run_id=JOB_ID or "manual",
+            write_monitor(engine, job_id=JOB_ID or "manual",
                          mode="compare",
                          drift=compute_result["drift"],
                          drift_score=compute_result["drift_score"])

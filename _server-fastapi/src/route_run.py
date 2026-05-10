@@ -139,7 +139,7 @@ async def ep_run_prophet(
 async def ep_run_monitor(
     mode: Literal["snapshot", "compare"] = Query(default="snapshot")
 ):
-    logger.debug("function ep_run_monitor")
+    logger.debug(f"function ep_run_monitor - mode: {mode}")
     cmd = [
         "python",
         os.path.join(WORKERS_PATH, "monitor_worker.py"),

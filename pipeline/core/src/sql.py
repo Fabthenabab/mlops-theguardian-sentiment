@@ -146,7 +146,7 @@ def create_table_monitor(engine, schema=DB_SCHEMA):
     stmt = text(f"""
         CREATE TABLE IF NOT EXISTS {schema}.monitor (
             id          SERIAL PRIMARY KEY,
-            run_id      VARCHAR(36),
+            job_id      VARCHAR(36),
             run_date    DATE,
             mode        VARCHAR(10),
             drift       BOOLEAN,
@@ -479,14 +479,14 @@ def fetch_job(engine, job_id: str, schema=DB_SCHEMA) -> dict:
 # ──────────────────────────────────────────────
 #  MONITOR
 # ──────────────────────────────────────────────
-def write_monitor(engine, run_id: str, mode: str,
+def write_monitor(engine, job_id: str, mode: str,
                   drift: bool, drift_score: float,
                   schema=DB_SCHEMA):
     """
     Write a monitor run result into theguardian.monitor.
 
     Args:
-        run_id      : job_id from theguardian.jobs
+        job_id      : job_id from theguardian.jobs
         mode        : snapshot | compare
         drift       : drift detected yes/no
         drift_score : Evidently drift score
@@ -494,12 +494,12 @@ def write_monitor(engine, run_id: str, mode: str,
     logger.debug("function write_monitor")
     import datetime
     stmt = text(f"""
-        INSERT INTO {schema}.monitor (run_id, run_date, mode, drift, drift_score)
-        VALUES (:run_id, :run_date, :mode, :drift, :drift_score)
+        INSERT INTO {schema}.monitor (job_id, run_date, mode, drift, drift_score)
+        VALUES (:job_id, :run_date, :mode, :drift, :drift_score)
     """)
     with engine.begin() as conn:
         conn.execute(stmt, {
-            "run_id":      run_id,
+            "job_id":      job_id,
             "run_date":    datetime.date.today(),
             "mode":        mode,
             "drift":       drift,
@@ -516,7 +516,7 @@ def fetch_last_monitor(engine, schema=DB_SCHEMA) -> dict:
     """
     logger.debug("function fetch_last_monitor")
     stmt = text(f"""
-        SELECT id, run_id, run_date, mode, drift, drift_score, created_at
+        SELECT id, job_id, run_date, mode, drift, drift_score, created_at
         FROM {schema}.monitor
         WHERE mode = 'compare'
         ORDER BY created_at DESC
@@ -531,17 +531,17 @@ def fetch_last_monitor(engine, schema=DB_SCHEMA) -> dict:
     return dict(row._mapping)
 
 
-def fetch_monitor_by_run_id(engine, run_id: str, schema=DB_SCHEMA) -> dict:
-    """Return a monitor run result by run_id."""
-    logger.debug("function fetch_monitor_by_run_id")
+def fetch_monitor_by_job_id(engine, job_id: str, schema=DB_SCHEMA) -> dict:
+    """Return a monitor run result by job_id."""
+    logger.debug("function fetch_monitor_by_job_id")
     stmt = text(f"""
-        SELECT id, run_id, run_date, mode, drift, drift_score, created_at
+        SELECT id, job_id, run_date, mode, drift, drift_score, created_at
         FROM {schema}.monitor
-        WHERE run_id = :run_id
+        WHERE job_id = :job_id
         LIMIT 1
     """)
     with engine.connect() as conn:
-        row = conn.execute(stmt, {"run_id": run_id}).fetchone()
+        row = conn.execute(stmt, {"job_id": job_id}).fetchone()
 
     if row is None:
         return {}

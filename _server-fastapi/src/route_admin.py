@@ -23,7 +23,7 @@ admin_router = APIRouter()
 # ===============================
 # Pydantic
 # ===============================
-from fastapi import Request
+from fastapi import Request, HTTPException
 from pydantic import BaseModel
 
 # Input
@@ -42,7 +42,7 @@ class RollbackResponse(BaseModel):
 
 
 class DriftReportResponse(BaseModel):
-    run_id:      str | None
+    job_id:      str | None
     run_date:    str | None
     mode:        str | None
     drift:       bool | None
@@ -53,7 +53,7 @@ class DriftReportResponse(BaseModel):
 # ===============================
 # Admin entry point
 # ===============================
-from pipeline.core.src.sql import get_engine, inject_drift, rollback_drift, fetch_monitor_by_run_id
+from pipeline.core.src.sql import get_engine, inject_drift, rollback_drift, fetch_monitor_by_job_id
 
 engine = get_engine()
 
@@ -89,15 +89,15 @@ async def ep_rollback_drift():
 #  GET /admin/drift-report
 # ──────────────────────────────────────────────
 
-@admin_router.get("/admin/drift-report/{run_id}", response_model=DriftReportResponse)
-async def ep_drift_report(run_id: str):
+@admin_router.get("/admin/drift-report/{job_id}", response_model=DriftReportResponse)
+async def ep_drift_report(job_id: str):
     logger.info("function ep_drift_report")
-    logger.info(f"Evidently report for run_id: {run_id}")
-    report = fetch_monitor_by_run_id(engine, run_id=run_id)
+    logger.info(f"Evidently report for job_id: {job_id}")
+    report = fetch_monitor_by_job_id(engine, job_id=job_id)
     if not report:
-        raise HTTPException(status_code=404, detail=f"No drift report found for run_id: {run_id}")
+        raise HTTPException(status_code=404, detail=f"No drift report found for job_id: {job_id}")
     return DriftReportResponse(
-        run_id      = report.get("run_id"),
+        job_id      = report.get("job_id"),
         run_date    = str(report.get("run_date")),
         mode        = report.get("mode"),
         drift       = report.get("drift"),

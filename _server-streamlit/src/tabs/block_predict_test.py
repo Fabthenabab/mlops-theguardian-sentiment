@@ -8,7 +8,7 @@ from utils.api import predict
 def render():
     st.markdown("### Test FinBERT sentiment analysis on a news article")
 
-    # Zone de saisie
+    # Input
     article_id = st.text_input("Article ID", value="test-001")
     article_text = st.text_area("Article text", height=200,
         placeholder="Paste a Guardian business article here...")

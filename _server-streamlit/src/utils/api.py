@@ -25,3 +25,38 @@ def get_trend_by_date(run_date) -> dict:
         return {}
     resp.raise_for_status()
     return resp.json()
+
+
+def inject_drift(n: int = 100) -> dict:
+    resp = requests.post(f"{URL_API}/admin/inject-drift", json={"n": n})
+    resp.raise_for_status()
+    return resp.json()
+
+
+def rollback_drift() -> int:
+    resp = requests.post(f"{URL_API}/admin/rollback-drift")
+    resp.raise_for_status()
+    return resp.json()
+
+
+def run_monitor(mode: str = "compare") -> str:
+    # Pass argument mode to post request param
+    resp = requests.post(f"{URL_API}/run/monitor", params={"mode": mode})
+    resp.raise_for_status()
+    return resp.json()
+
+def get_drift_report(job_id: str) -> dict:
+    resp = requests.get(f"{URL_API}/admin/drift-report/{job_id}")
+    if resp.status_code == 404:
+        return {}
+    else:
+        resp.raise_for_status()
+        return resp.json()   
+
+def get_status(job_id: str) -> dict:
+    resp = requests.get(f"{URL_API}/status/{job_id}")
+    if resp.status_code == 404:
+        return {}
+    else:
+        resp.raise_for_status()
+        return resp.json()   
