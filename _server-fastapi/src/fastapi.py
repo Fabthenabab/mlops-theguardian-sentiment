@@ -1,4 +1,8 @@
 #fastapi.py
+
+# Utilise lifespan pour définir le niveau de persistance de variables plutôt que des var globales
+# utilise app.state pour passer ces var de l'app fastapi.py vers les routers
+
 import os
 import io
 import sys
@@ -96,8 +100,3 @@ app.include_router(run_router)
 # Include router
 from .route_admin import admin_router
 app.include_router(admin_router)
-
-# ************************************************************************************************************
-# Include router
-#from .route_reload_model import reload_model_router
-#app.include_router(reload_model_router)

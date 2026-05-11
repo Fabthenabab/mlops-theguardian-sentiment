@@ -334,6 +334,26 @@ def fetch_processed_for_drift(engine, days: int = 90, schema=DB_SCHEMA) -> pd.Da
     logger.info(f"Fetched {len(df)} articles over {days} days window")
     return df
 
+# Fetch (pour fetch)
+from datetime import date
+
+def fetch_last_article_date(engine, schema=DB_SCHEMA) -> date:
+    """
+    Return the most recent article date in theguardian.articles,
+    excluding drift-injected articles.
+    Used by worker_fetch to determine the start of the incremental fetch.
+    """
+    logger.debug("function fetch_last_article_date")
+    stmt = text(f"""
+        SELECT MAX(date) 
+        FROM {schema}.articles
+        WHERE id NOT LIKE 'drift_%'
+    """)
+    with engine.connect() as conn:
+        result = conn.execute(stmt).scalar()
+    
+    logger.info(f"Last article date in base: {result}")
+    return result
 
 # ──────────────────────────────────────────────
 #  FORECASTS

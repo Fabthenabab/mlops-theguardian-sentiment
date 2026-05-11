@@ -64,6 +64,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - WORKERS_PATH=/home/user/app/_workers
       - WORKERS_LOGS_PATH=/home/user/logs
+      - THEGUARDIAN_API_KEY=${THEGUARDIAN_API_KEY}
     # Networking & volumes
     networks:
       - ${PROJECT_NAME}-network

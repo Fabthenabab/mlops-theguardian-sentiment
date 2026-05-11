@@ -1,5 +1,19 @@
 # _workers/transformers_worker.py
 
+# Lit JOB_ID depuis l'environnement
+# Crée le moteur PostgreSQL
+# Fetch le job depuis theguardian.jobs pour log
+#   READ   theguardian.jobs     → fetch_job (log du statut)
+# Fetch les articles non traités (sentiment_label IS NULL)
+#   READ   theguardian.articles → fetch_unprocessed (WHERE sentiment_label IS NULL)
+# Applique optionnellement un --limit pour les tests
+# Charge FinBERT depuis HuggingFace (@production ou Hub direct)
+# Traite par batch de 32 articles (defaut = 32)
+# Met à jour sentiment_label et sentiment_score par batch
+#   WRITE  theguardian.articles → update_sentiment_batch (sentiment_label, sentiment_score)
+# Met à jour le job done ou error dans theguardian.jobs
+#   WRITE  theguardian.jobs     → update_job (status: done | error, articles processed)
+
 import os
 import logging
 from transformers import pipeline
@@ -22,7 +36,7 @@ SCHEMA = os.getenv("DB_SCHEMA", "theguardian")
 
 # JOB_ID
 # Define WORKER context
-# Interaction avec theguardian.jobs
+# Interaction with theguardian.jobs
 from pipeline.core.src.sql import fetch_job, update_job
 import datetime
 # Get JOB_ID passed to sub process in worker's parent process run_router
@@ -37,7 +51,7 @@ def run(batch_size: int = 32, limit: int = None):
     # apply FinBERT to the body of an article stored in SQL DB
     # Proceed by batch processing
      # allow to limit the size of processed articles
-    logger.info("transformers_worker started")
+    logger.debug("transformers_worker started")
     engine = None
     try:
         engine = get_engine()

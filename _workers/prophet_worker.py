@@ -1,5 +1,27 @@
 # _workers/prophet_worker.py
 
+# Fonction: entraînement Prophet sur les scores de sentiment agrégés hebdomadairement, logging MLflow, promotion @production, tag retrain
+# utilise argparse pour logger l'origine du retrain
+# 
+# Lit JOB_ID et --retrain scheduled|evidently_drift depuis l'environnement/args
+# Crée le moteur PostgreSQL
+# Fetch le job depuis theguardian.jobs pour log
+#   READ   theguardian.jobs      → fetch_job (log du statut)
+# Fetch tous les articles traités (sentiment_label IS NOT NULL)
+#   READ   theguardian.articles  → fetch_processed (sentiment_label IS NOT NULL)
+# Calcule le score signé (sentiment_score * map(label))
+# Agrège par semaine (resample("W"))
+# Entraîne Prophet sur la série temporelle hebdomadaire
+# Génère les forecasts sur HORIZON_DAYS (défaut 30j)
+# Calcule le MAE sur la période historique
+# Log run, params, métriques dans MLflow
+# Enregistre le modèle dans MLflow registry
+# Promeut @production avec alias
+# Écrit les forecasts dans theguardian.forecasts
+#   WRITE  theguardian.forecasts → write_forecasts (ds, yhat, yhat_lower, yhat_upper, job_id, run_date)
+# Met à jour le job done ou error dans theguardian.jobs
+#   WRITE  theguardian.jobs      → update_job (status: done | error)
+
 import os
 import logging
 import mlflow

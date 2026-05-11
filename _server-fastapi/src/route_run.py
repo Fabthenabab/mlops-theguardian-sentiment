@@ -68,10 +68,12 @@ engine = get_engine()
 def _launch(worker: str, cmd: list) -> RunResponse:
     '''
     Factorize commune operations for different entry point
+    Launch *_worker.py in a subprocess,
+    As a new job, with job_id=uuid,
+    and return this job in db with status="started"
     
     '''
-    
-    logger.debug("function _launch")
+    logger.info("function _launch")
     # Define unique id process for worker process
     job_id = str(uuid.uuid4())
 
@@ -146,6 +148,16 @@ async def ep_run_monitor(
         "--mode", mode
     ]
     return _launch("monitor", cmd)
+
+
+# ──────────────────────────────────────────────
+#  /run/fetch
+# ──────────────────────────────────────────────
+@run_router.post("/run/fetch", response_model=RunResponse)
+async def ep_run_fetch():
+    logger.debug("function ep_run_fetch")
+    cmd = ["python", os.path.join(WORKERS_PATH, "fetch_worker.py")]
+    return _launch("fetch", cmd)
 
 
 # ──────────────────────────────────────────────

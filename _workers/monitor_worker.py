@@ -1,4 +1,33 @@
 # _workers/monitor_worker.py
+
+# Fonction : monitoring de drift Evidently sur les scores de sentiment FinBERT 
+# 2 MODES : snapshot (sauvegarde référence) et compare (détection de drift)
+# le mode est passé par argparse
+#
+# Lit JOB_ID depuis l'environnement
+# Crée le moteur PostgreSQL
+# Fetch le job depuis theguardian.jobs pour log
+#   READ   theguardian.jobs      → fetch_job (log du statut)
+#
+# MODE snapshot
+#   Fetch les articles traités sur la fenêtre de référence (REFERENCE_WINDOW_DAYS=60j)
+#       READ   theguardian.articles  → fetch_processed_for_drift(sentiment_label, sentiment_score sur fenêtre glissante 60j)
+#   Sauvegarde le DataFrame [sentiment_label, sentiment_score] en parquet sur S3
+#   Écrit une ligne dans theguardian.monitor (mode=snapshot, drift=False, score=0.0)
+#       WRITE  theguardian.monitor   → write_monitor (job_id, mode, drift, drift_score)
+#   Met à jour le job done ou error
+#       WRITE  theguardian.jobs      → update_job (status: done | error) 
+# ===========================
+# MODE compare
+#   Fetch les articles traités sur la fenêtre d'observation (OBSERVATION_WINDOW_DAYS=14j)
+#       READ   theguardian.articles  → fetch_processed_for_drift(sentiment_label, sentiment_score sur fenêtre glissante 14j)
+#   Charge la référence parquet depuis S3
+#   Calcule le drift Evidently (DataDriftPreset) entre current et reference
+#   Écrit le résultat dans theguardian.monitor (drift=True/False, drift_score)
+#       WRITE  theguardian.monitor   → write_monitor (job_id, mode, drift, drift_score)
+#   Met à jour le job done ou error
+#       WRITE  theguardian.jobs      → update_job (status: done | error)
+
 import os
 import logging
 import pandas as pd
@@ -38,7 +67,6 @@ def run(mode):
     engine = None
     try:
         from pipeline.core.src.sql import fetch_processed_for_drift, write_monitor
-        
         from pipeline.core.src.drift import save_reference, load_reference, compute_drift
         
         engine = get_engine()

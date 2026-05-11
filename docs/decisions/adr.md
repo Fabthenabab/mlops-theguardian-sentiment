@@ -123,8 +123,7 @@ Limite assumée :
 # ADR-005 — Supervisord plutôt que start.sh pour la gestion des processus
 Date : 2026-05-01
 Contexte :
-  Le Space HF doit faire tourner nginx, uvicorn et streamlit
-  dans un seul conteneur (contrainte HF Spaces : un seul port exposé).
+  Le Space HF doit faire tourner nginx, uvicorn et streamlit dans un seul conteneur (contrainte HF Spaces : un seul port exposé).
 
 Problème de start.sh :
   Gestion manuelle des processus avec & et wait.
@@ -159,7 +158,7 @@ Alternatives rejetées :
 
 ---
 # ADR-007 — Workers externes, commandés via HTTP par Airflow
-Date : 2026-05-01 [MODIF : 2026-05-08]
+Date : 2026-05-01 [MODIF : 2026-05-10]
 ### Contexte
 Sur le projet fraud-detection, Airflow exécutait directement les tâches lourdes de ML (feature engineering, entraînement) via des PythonOperators.
 Cela posait deux problèmes :
@@ -183,7 +182,7 @@ Centraliser le code ML dans le conteneur manager — un seul endroit, pas de dup
 ### Séparation des responsabilités
 
 supervisord → gère uniquement les services permanents (*_service)
-FastAPI     → contrôle les workers ponctuels via subprocess (*_worker)
+FastAPI     → contrôle des workers ponctuels via subprocess (*_worker) - ces workers sont dédiés à des tâches. On peut leur passer des arguments via argparse (main du worker)
 Airflow     → orchestre via HttpOperator, ne contient aucune logique ML
 
 supervisord n'est pas conçu pour start/stop répétés à la demande — ce rôle est délégué à FastAPI qui lance les workers ponctuellement.
@@ -236,10 +235,11 @@ Les scores ne passent jamais par XCOM.
 
 ```
 _workers/
-├── worker_transformers.py   → fetch Guardian + inférence FinBERT
-├── worker_prophet.py        → entraînement Prophet
+├── fetch_worker.py          → fetch The Guardian
+├── transformers_worker.py   → inférence FinBERT
+├── prophet_worker.py        → entraînement Prophet
 │                              --retrain scheduled | evidently_drift
-└── worker_monitor.py        → monitoring Evidently
+└── monitor_worker.py        → monitoring Evidently
                               --mode snapshot | compare
                               code drift dans pipeline.core.src.drift
                               pas de duplication entre Airflow et FastAPI
@@ -247,9 +247,12 @@ _workers/
 
 ### Airflow (local)
 
+Airflow lance les DAGs qui lancent les traitements via les workers, dont l'exécution est commandée via les endpoints de l'API.  
+ 
 ```
 Airflow (local)
-└── HttpOperator → POST /run/transformers  → démarre le worker
+└── HttpOperator → POST /run/fetch        → démarre le worker
+└── HttpOperator → POST /run/transformers → idem
 └── HttpOperator → GET  /status/{job_id}  → poll jusqu'à "done"
 └── HttpOperator → POST /run/prophet      → idem
 └── HttpOperator → POST /run/monitor      → idem
@@ -259,8 +262,11 @@ Airflow (local)
 
 ```
 dag_infer
-├── Task 1 : POST /run/transformers → xcom_push(job_id)
-└── Task 2 : GET  /status/{job_id}  → poll jusqu'à "done"  
+├── Task 1 : POST /run/fetch          → xcom_push(job_id)
+├── Task 2 : GET  /status/{job_id}    → poll jusqu'à "done"
+├── Task 3 : POST /run/transformers   → xcom_push(job_id)
+└── Task 4 : GET  /status/{job_id}    → poll jusqu'à "done"
+
 
 dag_forecast
 ├── Task 1 : POST /run/prophet?retrain=scheduled → xcom_push(job_id)
@@ -287,13 +293,14 @@ HF Space — manager
     ├── api_service        → FastAPI : endpoints métier + /run/* + /status/*
     └── streamlit_service  → dashboard
 
-FastAPI /run/transformers  → subprocess worker_transformers.py
-FastAPI /run/prophet       → subprocess worker_prophet.py --retrain scheduled|evidently_drift
-FastAPI /run/monitor       → subprocess worker_monitor.py --mode snapshot|compare
+FastAPI /run/fetch         → subprocess fetch_worker.py
+FastAPI /run/transformers  → subprocess transformers_worker.py
+FastAPI /run/prophet       → subprocess prophet_worker.py --retrain scheduled|evidently_drift
+FastAPI /run/monitor       → subprocess monitor_worker.py --mode snapshot|compare
 FastAPI /status/{job_id}   → lit theguardian.jobs → retourne statut + métadonnées
 FastAPI /admin/inject-drift  → inject_drift() sql.py
 FastAPI /admin/rollback-drift → rollback_drift() sql.py
-FastAPI /admin/drift-report  → subprocess worker_monitor.py --mode compare
+FastAPI /admin/drift-report  → subprocess monitor_worker.py --mode compare
 ```
 
 ### Compromis assumés
@@ -315,15 +322,21 @@ Si le use case évolue vers du temps réel, ce pattern HTTP polling devra être 
 
 ---
 # ADR-008 — Initial feed via notebook, feed incrémental via worker
-Date : 2026-05-05
+Date : 2026-05-05 [MODIF : 2026-05-10]
 Le chargement historique des articles Guardian (2017-2026) a été réalisé en one-shot depuis un notebook local.
 Ce n'est pas un composant du système en production.
 
-Le feed incrémental est intégré dans worker_transformers :
-fetch → transform → insert → inférence dans le même process.
+## Feed incrémental — fetch_worker
 
-Justification : pas de valeur à séparer fetch et inférence pour un batch incrémental de faible volume (quelques dizaines d'articles par run horaire).
+Un worker dédié gère le feed incrémental en production.
+Il évite les trous dans la série temporelle en calculant les mois manquants depuis la dernière date connue en base.
 
+## Séparation des responsabilités
+
+worker_fetch    → fetch Guardian API + insert en base
+worker_transformers → inférence FinBERT sur articles non traités
+
+Le fetch et l'inférence sont découplés — on peut refetcher sans réinférer, et réinférer sans refetcher.
 
 ---
 # ADR-009 — Stratégie de monitoring et réentraînement Prophet

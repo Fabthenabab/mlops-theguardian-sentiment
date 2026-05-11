@@ -59,7 +59,7 @@ def fetch_archives(year: int, month: int) -> pd.DataFrame:
         if page >= data["pages"]:
             break
         page += 1
-        time.sleep(0.5)  # 12 req/s max, on reste large
+        time.sleep(0.5)  # 12 req/s max avec le plan de consultation gratuit sur l'api
 
     df = pd.json_normalize(all_results)
     logger.info("Fetched %d articles for %d/%02d", len(df), year, month)
