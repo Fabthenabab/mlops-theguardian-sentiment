@@ -1,12 +1,16 @@
-pandas
-requests
-dotenv
-sqlalchemy
-# torch via pip install torch --index-url https://download.pytorch.org/whl/cpu
-transformers
+# Dev tools
+jupyter
+ipykernel
 ipywidgets
-psycopg2-binary
-prophet
-plotly
-nbformat
-mlflow
+duckdb
+pytest
+ruff
+
+# Pipeline lib
+-e .   # installe le package local en mode éditable
+
+
+# Inclut les dépendances de prod
+-r _server-fastapi/requirements.txt
+-r _server-fastapi/requirements-torch.txt
+-r _server-streamlit/requirements.txt

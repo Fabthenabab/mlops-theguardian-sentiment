@@ -9,7 +9,8 @@ Système MLOps de veille économique automatisée : un moteur DL (Transformers) 
     $ python3 -m venv .venv-theguardian
     $ source .venv-theguardian/bin/activate
     $ pip install --upgrade pip
-    $ pip install -r requirements.txt
+    $ pip install -r requirements.txt# Installation complète en dev
+    $ pip install -r requirements-torch.txt
     $ pip install torch --index-url https://download.pytorch.org/whl/cpu
 '''
 

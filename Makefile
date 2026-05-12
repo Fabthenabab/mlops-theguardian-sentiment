@@ -8,13 +8,20 @@ export
 MLFLOW_SRC_DIR=_server-mlflow
 REV_PROXY_DIR=_server-nginx
 DASHBOARD_SRC_DIR=_server-streamlit
-
+FASTAPI_SRC_DIR=_server-fastapi
+WORKERS_SRC_DIR=_workers
+CONF_DIR=_CONF
 
 # DON'T CHANGE THESE NAMES
 MLFLOW=mlflow
+MANAGER_SERVER=manager-server
+DASHBOARD=streamlit
+API=api
+
 
 # DEPLOY DIRS
 STAGING_DIR=_staging_app-server
+HFSPACES_DEPLOY_DIR=_HF-SPACES
 
 
 
@@ -76,12 +83,65 @@ pre-build:
 	@echo "[MLFLOW]"
 	@cp -r $(MLFLOW_SRC_DIR)/ $(STAGING_DIR)/$(MLFLOW) 2>/dev/null || true && echo " => Copying $(MLFLOW_SRC_DIR)/ in $(STAGING_DIR)/$(MLFLOW): ✅"
 
+# Prepare manager dir
+	@echo "[MANAGER_SERVER]"
+	@rm -rf $(STAGING_DIR)/$(MANAGER_SERVER) && mkdir -p $(STAGING_DIR)/$(MANAGER_SERVER) && echo " => Creating $(STAGING_DIR)/$(MANAGER_SERVER): ✅"
+	@echo "[CONF STAGING FILES]"
+	@cp $(CONF_DIR)/staging/README.md $(STAGING_DIR)/$(MANAGER_SERVER)/README.md  2>/dev/null || true && echo " => Copying $(CONF_DIR)/README.md in $(STAGING_DIR)/$(MANAGER_SERVER)/README.md: ✅"
+	@echo "[REQUIREMENTS]"
+	@cp $(CONF_DIR)/staging/requirements.txt $(STAGING_DIR)/$(MANAGER_SERVER)/requirements.txt  2>/dev/null || true && echo " => Copying $(CONF_DIR)/requirements.txt in $(STAGING_DIR)/$(MANAGER_SERVER)/requirements.txt: ✅"
+	@cp $(FASTAPI_SRC_DIR)/requirements-torch.txt $(STAGING_DIR)/$(MANAGER_SERVER)/requirements-torch.txt  2>/dev/null || true && echo " => Copying $(FASTAPI_SRC_DIR)/requirements-torch.txt in $(STAGING_DIR)/$(MANAGER_SERVER)/requirements-torch.txt: ✅"
+	@echo "[SUPERVISORD]"
+	@cp $(CONF_DIR)/staging/supervisord.conf $(STAGING_DIR)/$(MANAGER_SERVER)/supervisord.conf  2>/dev/null || true && echo " => Copying $(CONF_DIR)/supervisord.conf in $(STAGING_DIR)/$(MANAGER_SERVER)/supervisord.conf: ✅"
+# Copy nginx files: nginx.conf, default.conf.template (with envsubst), html/..
+# Substitute directly env variables in default.conf.template
+# because automatic envsubst from nginx entrypoint only works
+# with nginx official image and not from nginx apt install
+	@echo "[NGINX]"
+	@mkdir $(STAGING_DIR)/$(MANAGER_SERVER)/mnt
+	@cp -r $(REV_PROXY_DIR)/html/ $(STAGING_DIR)/$(MANAGER_SERVER)/mnt/html/ 2>/dev/null || true
+	@cp -r $(DASHBOARD_SRC_DIR)/src/assets/* $(STAGING_DIR)/$(MANAGER_SERVER)/mnt/html/ 2>/dev/null || true
+	@cp $(CONF_DIR)/staging/nginx.conf $(STAGING_DIR)/$(MANAGER_SERVER)/nginx.conf 2>/dev/null || true
+	@envsubst '$$PORT_NGINX_EXTERNAL $$PROXY_PASS_DASHBOARD $$PROXY_PASS_API' \
+		< $(REV_PROXY_DIR)/default.conf.template \
+		> $(STAGING_DIR)/$(MANAGER_SERVER)/default.conf
+
+# Copy api files
+	@echo "[API]"
+	@mkdir $(STAGING_DIR)/$(MANAGER_SERVER)/$(API)
+	@cp -r $(FASTAPI_SRC_DIR)/src $(STAGING_DIR)/$(MANAGER_SERVER)/$(API)/  2>/dev/null || true && echo " => Copying $(FASTAPI_SRC_DIR)/src in $(STAGING_DIR)/$(MANAGER_SERVER)/$(API)/: ✅"
+
+# Copy dashboard files
+	@mkdir $(STAGING_DIR)/$(MANAGER_SERVER)/$(DASHBOARD)
+	@cp -r $(DASHBOARD_SRC_DIR)/.streamlit $(STAGING_DIR)/$(MANAGER_SERVER)/$(DASHBOARD)/ 2>/dev/null || true && echo " => Copying $(DASHBOARD_SRC_DIR)/.streamlit in $(STAGING_DIR)/$(MANAGER_SERVER)/$(DASHBOARD)/: ✅"
+	@cp -r $(DASHBOARD_SRC_DIR)/src $(STAGING_DIR)/$(MANAGER_SERVER)/$(DASHBOARD)/ 2>/dev/null || true && echo " => Copying $(DASHBOARD_SRC_DIR)/src in $(STAGING_DIR)/$(MANAGER_SERVER)/$(DASHBOARD)/: ✅"
+
+# Copy workers
+	@cp -r $(WORKERS_SRC_DIR) $(STAGING_DIR)/$(MANAGER_SERVER)// 2>/dev/null || true && echo " => Copying $(WORKERS_SRC_DIR) in $(STAGING_DIR)/$(MANAGER_SERVER)/: ✅"
+
+# Copy pipeline files
+	@cp -r pipeline $(STAGING_DIR)/$(MANAGER_SERVER)/ 2>/dev/null || true && echo " => Copying pipeline in $(STAGING_DIR)/$(MANAGER_SERVER)/: ✅"
+	@cp pyproject.toml $(STAGING_DIR)/$(MANAGER_SERVER)/ 2>/dev/null || true && echo " => Copying pyproject.toml in $(STAGING_DIR)/$(MANAGER_SERVER)/: ✅"
+
+# Copy Dockerfile
+	@echo "[DOCKERFILE]"
+	@cp -r $(CONF_DIR)/staging/Dockerfile $(STAGING_DIR)/$(MANAGER_SERVER)/Dockerfile  2>/dev/null || true && echo " => Copying $(CONF_DIR)/Dockerfile in $(STAGING_DIR)/$(MANAGER_SERVER)/Dockerfile: ✅"
+	
+# Remove __pycache__
+	@echo "[CLEANING $(STAGING_DIR)]"
+	@find $(STAGING_DIR) -type d -name '__pycache__' -exec rm -rf {} + \
+		&& echo "=> Removing __pycache__ in $(STAGING_DIR): ✅"
 
 
 # ====================================================
 # Prod mode: HF Spaces deploy
 # ====================================================
-HFSPACES_DEPLOY_DIR=_HF-SPACES
+
+
+# Prepare HF PUSH
+	@echo "[_HF-SPACES DIR]"
+	@rm -rf $(HFSPACES_DEPLOY_DIR) && mkdir -p $(HFSPACES_DEPLOY_DIR)/$(MANAGER_SERVER) && echo " => Created $(HFSPACES_DEPLOY_DIR)/$(MANAGER_SERVER): ✅"
+
 
 
 # =================================================
