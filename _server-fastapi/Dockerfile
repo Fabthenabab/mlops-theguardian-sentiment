@@ -59,10 +59,10 @@ WORKDIR $HOME/app
 # requirements
 # copy in WORKDIR $HOME/app
 COPY --chown=user:user ./_server-fastapi/requirements.txt ./requirements.txt
-COPY --chown=user:user ./_server-fastapi/requirements-torch.txt ./requirements.txt
 RUN pip install --upgrade pip
+RUN pip install --no-cache-dir torch==2.11.0+cpu --index-url https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir -r ./requirements.txt
-RUN pip install --no-cache-dir -r ./requirements-torch.txt
+
 
 
 # Set environment variables

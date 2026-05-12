@@ -57,8 +57,8 @@ RUN apt-get update && apt-get install -y \
 # NEED TO chown, chmod...
 # Build time variables
 # Define default value for deployment mode
-# WILL BE ADAPTED TO ./ in prod/Dockerfile 
-ARG MANAGER_SERVER_DIR=./_staging_app-server/manager-server
+# ADAPTED FROM ./_staging_app-server/manager-server in staging/Dockerfile 
+ARG MANAGER_SERVER_DIR=./
 ARG PORT_NGINX_EXPOSED=7860
 ARG STARTUP_SCRIPT_DIR=/usr/local/bin
 

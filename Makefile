@@ -132,16 +132,34 @@ pre-build:
 	@find $(STAGING_DIR) -type d -name '__pycache__' -exec rm -rf {} + \
 		&& echo "=> Removing __pycache__ in $(STAGING_DIR): ✅"
 
+# Empty HF-HFSPACES_DEPLOY_DIR
+	@echo "[_HF-SPACES DIR]"
+	@rm -rf $(HFSPACES_DEPLOY_DIR) && mkdir -p $(HFSPACES_DEPLOY_DIR) && echo " => Created $(HFSPACES_DEPLOY_DIR): ✅"
+
+# ====================================================
+# Staging mode: build, run
+# ====================================================
+# Build staging manager
+build-manager: pre-build ## Build staging image
+	@echo "🚀 BUILDING MANAGER DEPLOYMENT IMAGE"
+	@docker build \
+		-f ./$(STAGING_DIR)/$(MANAGER_SERVER)/Dockerfile \
+		-t $(APP_IMG) . \
+		&& echo " => Built image $(APP_IMG): ✅"
+
+
+
+
+
+
+
+
+
+
 
 # ====================================================
 # Prod mode: HF Spaces deploy
 # ====================================================
-
-
-# Prepare HF PUSH
-	@echo "[_HF-SPACES DIR]"
-	@rm -rf $(HFSPACES_DEPLOY_DIR) && mkdir -p $(HFSPACES_DEPLOY_DIR)/$(MANAGER_SERVER) && echo " => Created $(HFSPACES_DEPLOY_DIR)/$(MANAGER_SERVER): ✅"
-
 
 
 # =================================================
@@ -175,6 +193,55 @@ push-mlflow: pre-build ## Deploy to HuggingFace Spaces
 
 	@echo "📤 Pushing to HF Spaces..."
 	@cd $(HFSPACES_DEPLOY_DIR)/$(MLFLOW) && \
+		git add . && \
+		if git diff --cached --quiet; then \
+			echo " => No changes to push"; \
+		else \
+			git commit -m "Deploy: $$(date '+%Y-%m-%d %H:%M:%S')" && \
+			git push && \
+			echo " => Pushed to HF Spaces: ✅"; \
+		fi
+
+	@echo ""
+	@echo "🎉 Deployment complete!"
+
+
+# =================================================
+push-manager: pre-build ## Deploy to HuggingFace Spaces
+	$(eval include _CONF/prod/.env.prod)
+	@echo "🤗 Push Manager server to HF SPACES"
+
+# Create Manager-server dir in HF_DEPLOY_DIR
+	@mkdir -p $(HFSPACES_DEPLOY_DIR)/$(MANAGER_SERVER) && echo " => Created $(HFSPACES_DEPLOY_DIR)/$(MANAGER_SERVER): ✅"
+
+	#	Clone if repo doesn't exist else pull
+	@if [ ! -d "$(HFSPACES_DEPLOY_DIR)/$(MANAGER_SERVER)/.git" ]; then \
+		echo " => Cloning HF repo..."; \
+		git clone $(HF_SPACE_MANAGER) $(HFSPACES_DEPLOY_DIR)/$(MANAGER_SERVER); \
+		echo " => Repo cloned: ✅"; \
+	else \
+		echo " => Pulling latest from HF..."; \
+		git -C $(HFSPACES_DEPLOY_DIR)/$(MANAGER_SERVER) pull; \
+		echo " => Repo updated: ✅"; \
+	fi
+
+	@echo " => Copying files..."
+	@rsync -av \
+		--delete \
+		--exclude='.git' \
+		$(STAGING_DIR)/$(MANAGER_SERVER)/ $(HFSPACES_DEPLOY_DIR)/$(MANAGER_SERVER) > /dev/null 2>&1 || true
+	@echo " => Files copied: ✅"
+# Replace staging Dockerfile by prod Dockerfile
+	@rm -f $(HFSPACES_DEPLOY_DIR)/$(MANAGER_SERVER)/Dockerfile > /dev/null 2>&1 || true
+	@cp -r $(CONF_DIR)/prod/Dockerfile $(HFSPACES_DEPLOY_DIR)/$(MANAGER_SERVER)/Dockerfile  2>/dev/null || true && echo " => staging Dockerfile replaced by prod: ✅"
+	@rm -rf $(STAGING_DIR)/$(MANAGER_SERVER) && \
+		echo " => $(STAGING_DIR)/$(MANAGER_SERVER) removed: ✅"
+
+	@echo "🔍 Git status:"
+	@cd $(HFSPACES_DEPLOY_DIR)/$(MANAGER_SERVER) && git status --short
+
+	@echo "📤 Pushing to HF Spaces..."
+	@cd $(HFSPACES_DEPLOY_DIR)/$(MANAGER_SERVER) && \
 		git add . && \
 		if git diff --cached --quiet; then \
 			echo " => No changes to push"; \
