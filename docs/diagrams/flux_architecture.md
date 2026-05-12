@@ -1,6 +1,7 @@
 # Architecture — Diagrammes de séquence
 
-Chaque flux est un diagramme Mermaid `sequenceDiagram` indépendant.
+Chaque flux est initié soit par un opérateur humain via le dashboard,
+soit par un opérateur humain ou airflow via swagger.
 
 ## Flux 1 — `/predict`
 

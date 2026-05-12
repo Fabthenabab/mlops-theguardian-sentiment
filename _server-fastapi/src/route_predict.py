@@ -21,6 +21,7 @@ predict_router = APIRouter()
 # ===============================
 # Pydantic
 # ===============================
+# Need request library to use app.state
 # Passing var from fastapi.py main app to route.py
 # via app.state
 # ex: request.app.state.ml_models
@@ -52,6 +53,11 @@ class ArticlesPredicted(BaseModel):
 @predict_router.post("/predict", response_model=ArticlesPredicted, include_in_schema=True)
 async def ep_predict(request: Request, body: Articles) -> dict:
     logger.debug(f"function ep_predict")
+    # We decide to load the model on fastapi startup
+    # and store the model for the whole app lifecycle in app.state
+    # This is achieved with the use of lifespan in app declaration
+    # we store it in the app state
+    # and access it via the request object.
     pipe = request.app.state.ml_models["finbert"]
     results = []
     

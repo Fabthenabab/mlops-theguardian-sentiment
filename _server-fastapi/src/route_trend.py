@@ -26,6 +26,7 @@ engine = get_engine()
 # ===============================
 from pydantic import BaseModel
 
+# Output
 class ForecastPoint(BaseModel):
     ds: date
     yhat: float

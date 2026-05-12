@@ -58,12 +58,11 @@ async def lifespan(app: FastAPI):
     app.state.ml_models.clear()
 
 
-
 # ************************************************************************************************************
-# Set root_path for nginx
+# Define app 
 app = FastAPI(
     lifespan=lifespan,  # Lifespan for model persistance
-    root_path="/api",
+    root_path="/api",   # Set root_path for nginx
     title="📰 The Guardian - Sentiment Analysis - ⚙️ Management API",
     description="The Guardian - Sentiment Analysis Management Tool",
     version="1.0.0"

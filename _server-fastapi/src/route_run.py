@@ -77,6 +77,7 @@ def _launch(worker: str, cmd: list) -> RunResponse:
     # Define unique id process for worker process
     job_id = str(uuid.uuid4())
 
+    # Create a new job in DB with status "started" and job_id = uuid, worker = worker
     # Define info to be stored in .jobs table in DB to allow worker process tracking
     create_job(engine, job_id=job_id, worker=worker)
 
