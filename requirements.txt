@@ -1,3 +1,6 @@
+# Install torch
+pip install --no-cache-dir torch==2.11.0+cpu --index-url https://download.pytorch.org/whl/cpu
+
 # Dev tools
 jupyter
 ipykernel
@@ -8,9 +11,3 @@ ruff
 
 # Pipeline lib
 -e .   # installe le package local en mode éditable
-
-
-# Inclut les dépendances de prod
--r _server-fastapi/requirements.txt
--r _server-fastapi/requirements-torch.txt
--r _server-streamlit/requirements.txt

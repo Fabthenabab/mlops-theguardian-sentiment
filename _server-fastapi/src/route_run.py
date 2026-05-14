@@ -6,7 +6,11 @@ import os
 # ================================
 import logging
 
-logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(name)s: %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -77,8 +81,10 @@ def _launch(worker: str, cmd: list) -> RunResponse:
     # Define unique id process for worker process
     job_id = str(uuid.uuid4())
 
-    # Create a new job in DB with status "started" and job_id = uuid, worker = worker
-    # Define info to be stored in .jobs table in DB to allow worker process tracking
+    # Create a new job in DB with status "started"
+    # and job_id = uuid, worker = worker
+    # Define info to be stored in .jobs table in DB
+    # to allow worker process tracking
     create_job(engine, job_id=job_id, worker=worker)
 
     # Define log file

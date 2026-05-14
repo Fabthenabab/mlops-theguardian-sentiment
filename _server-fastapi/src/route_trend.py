@@ -10,7 +10,11 @@ from pipeline.core.src.sql import get_engine, fetch_forecasts
 # ================================
 import logging
 
-logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(name)s: %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 

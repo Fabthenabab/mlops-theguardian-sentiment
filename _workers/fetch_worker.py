@@ -12,16 +12,22 @@
 # _workers/fetch_worker.py
 
 import os
-import logging
 import datetime
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 
-# ===========================
-# LOGGING
-# ===========================
-logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(name)s: %(message)s')
+# ===============================
+# Logging
+# ================================
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 logger = logging.getLogger("fetch_worker")
+logger.setLevel(logging.INFO)
 
 # ===========================
 # ENV

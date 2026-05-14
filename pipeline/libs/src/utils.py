@@ -1,6 +1,21 @@
-import os
 from pathlib import Path
 from dotenv import load_dotenv
+
+
+# ===============================
+# Logging
+# ================================
+import os
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 
 # Load .env from project root
 load_dotenv()
@@ -12,7 +27,7 @@ def get_project_root() -> Path:
     - In container: Use $PROJECT_ROOT defined in docker-compose.yml
     - Locally: Looks for .env 
     """
-
+    logger.debug('function get_project_root')
     project_root_env = os.getenv('PROJECT_ROOT')
     if project_root_env:
         project_root = Path(project_root_env).resolve()
@@ -29,6 +44,7 @@ def get_project_name(env_name="PROJECT_NAME"):
     Raises:
         ValueError: If the env_name environment variable is not set or is empty.
     """
+    logger.debug('function get_project_root')
     env_value = os.getenv(env_name)
     if not env_value:
         raise ValueError(f"The {env_name} environment variable is not set or is empty.")
@@ -46,6 +62,7 @@ def get_var_from_env(env_name):
     Raises:
         ValueError: If the env_name environment variable is not set or is empty.
     """
+    logger.debug('function get_project_root')
     env_value = os.getenv(env_name)
     if not env_value:
         raise ValueError(f"The {env_name} environment variable is not set or is empty.")

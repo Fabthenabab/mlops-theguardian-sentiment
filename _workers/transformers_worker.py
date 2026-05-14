@@ -15,19 +15,24 @@
 #   WRITE  theguardian.jobs     → update_job (status: done | error, articles processed)
 
 import os
-import logging
 from transformers import pipeline
 from pipeline.core.src.sql import get_engine, fetch_unprocessed, update_sentiment_batch
 
 # Enable CLI arguments to be passed to internal run function
 import argparse
 
-# ===========================
-# LOGGING
-# ===========================
-logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(name)s: %(message)s')
-logger = logging.getLogger("transformers_worker")
+# ===============================
+# Logging
+# ================================
+import logging
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger("transformers_worker")
+logger.setLevel(logging.INFO)
 
 # ===========================
 # ENV

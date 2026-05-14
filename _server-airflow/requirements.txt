@@ -1,0 +1,9 @@
+# Since there's only one provider, we can directly install it from docker-compose
+# x-airflow-common:
+#   environment:
+#        _PIP_ADDITIONAL_REQUIREMENTS: apache-airflow-providers-http==4.13.1
+# without the need for a separate requirements file
+# Nevertheless, we keep this file for future providers
+# and to have a clear overview of the dependencies of our Airflow instance
+# HTTP Provider for HttpOperator
+apache-airflow-providers-http==4.13.1

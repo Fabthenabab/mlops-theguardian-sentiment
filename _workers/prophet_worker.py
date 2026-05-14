@@ -23,18 +23,24 @@
 #   WRITE  theguardian.jobs      → update_job (status: done | error)
 
 import os
-import logging
 import mlflow
 import mlflow.prophet
 import pandas as pd
 from prophet import Prophet
 from pipeline.core.src.sql import get_engine
 
-# ===========================
-# LOGGING
-# ===========================
-logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(name)s: %(message)s')
+# ===============================
+# Logging
+# ================================
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 logger = logging.getLogger("prophet_worker")
+logger.setLevel(logging.INFO)
 
 
 # ===========================

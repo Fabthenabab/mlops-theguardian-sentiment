@@ -147,10 +147,10 @@ COPY --chown=${USER_APP}:${USER_GROUP} ${MANAGER_SERVER_DIR}/streamlit/src ./str
 # ======================
 # WORKERS
 # ======================
-# Create workers dir
-RUN mkdir -p ./workers && \
-    chown -R ${USER_APP}:${USER_GROUP} ./workers
-COPY --chown=${USER_APP}:${USER_GROUP} ${MANAGER_SERVER_DIR}/_workers ./workers
+# Create _workers dir
+RUN mkdir -p ./_workers && \
+    chown -R ${USER_APP}:${USER_GROUP} ./_workers
+COPY --chown=${USER_APP}:${USER_GROUP} ${MANAGER_SERVER_DIR}/_workers ./_workers
 
 # ========================================
 # PYTHON PATH
