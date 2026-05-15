@@ -41,3 +41,20 @@ docker compose up airflow-init
 # Lancer airflow
 docker compose up -d --remove-orphans
 
+# Modifier la durée de vie du token JWT
+  Le token JWT généré par le scheduler a une courte durée de vie — quand il expire, tous les appels API utilisant ce token échouent
+
+### Générer une clé
+  python -c "import secrets; print(secrets.token_hex(32))"
+
+### Ajouter 2 clés dans .env
+  AIRFLOW__API_AUTH__JWT_SECRET= la clé générée au dessus
+  AIRFLOW__API_AUTH__JWT_EXPIRATION_TIME=86400
+
+### Ajouter les clés dans docker-compose.yaml
+  AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW__API_AUTH__JWT_SECRET:-airflow_jwt_secret}
+  AIRFLOW__API_AUTH__JWT_EXPIRATION_TIME: ${AIRFLOW__API_AUTH__JWT_EXPIRATION_TIME:-86400}
+
+### Relancer les services airflow
+  docker compose down
+  docker compose up -d

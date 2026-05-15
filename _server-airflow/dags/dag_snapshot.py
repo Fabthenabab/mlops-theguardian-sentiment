@@ -23,7 +23,7 @@ logger.setLevel(logging.INFO)
     start_date=datetime(2026, 1, 1),
     catchup=False,  # Don't try to run missed runs between start_date and now
     max_active_runs=1,  # Ensure only one run at a time to avoid overlapping
-    tags=["monitor", "snapshot"],
+    tags=["monitor", "snapshot", "monthly"],
 )
 def dag_snapshot():
     
