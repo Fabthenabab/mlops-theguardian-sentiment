@@ -66,5 +66,5 @@ def fetch_archives(year: int, month: int) -> pd.DataFrame:
         time.sleep(0.5)  # 12 req/s max avec le plan de consultation gratuit sur l'api
 
     df = pd.json_normalize(all_results)
-    logger.info("Fetched %d articles for %d/%02d", len(df), year, month)
+    logger.info(f"Fetched {len(df)} articles for {year}/{month}")
     return df

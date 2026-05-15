@@ -1,0 +1,7 @@
+AIRFLOW_UID=1000
+
+
+# Le token JWT est renouvelé régulièrement mais il DOIT rester stable
+# pendant toute la duréé d'exécution du DAG sinon cela génère une incohérence et le DAG échoue
+AIRFLOW__API_AUTH__JWT_SECRET=***************** -> cf.README.md
+AIRFLOW__API_AUTH__JWT_EXPIRATION_TIME=86400

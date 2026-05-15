@@ -10,3 +10,24 @@ requires-python = ">=3.12"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["pipeline*"]
+
+# ========================
+# pytest section
+# ========================
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+ 
+# Markers declaration - avoid warnings "PytestUnknownMarkWarning"
+markers = [
+    "critical: core logic - essential — gate CI Jenkins (pytest -m critical)",
+    "smoke: sanity checks — No problem at system startup OK",
+    "slow: big workers ML (FinBERT, Prophet)",
+    "integration: need a real DB or a network call",
+]
+ 
+# Verbose by default + duration of slow tests
+addopts = "-v --tb=short --durations=5"
