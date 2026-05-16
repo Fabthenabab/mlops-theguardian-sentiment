@@ -31,6 +31,7 @@ data
 # Docs
 #docs
 docs/plan.txt
+*.webm
 
 # Externals
 assets/externals
@@ -45,6 +46,9 @@ sandbox.ipynb
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+
+# .pytest_cache
+.pytest_cache/
 
 theguardian_sentiment.egg-info/
 
