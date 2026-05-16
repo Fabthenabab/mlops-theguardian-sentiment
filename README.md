@@ -16,6 +16,56 @@ Système MLOps de veille économique automatisée : un moteur DL (Transformers) 
 
 ### Jenkins
 
+'''
+    $ docker compose -f docker-compose.yaml down --remove-orphans
+    $ cd _server-jenkins
+    $ docker compose build --no-cache
+    $ docker-compose up -d
+'''
+1. Ouvrir localhost:9105
+2. Nouveau job → Pipeline
+3. Coller l'URL GitHub du repo
+4. Jenkins trouve le Jenkinsfile à la racine automatiquement
+5. Compléter les caractéristiques du job:
+   À cocher :
+
+Do not allow concurrent builds ✓ — évite deux builds simultanés sur le même workspace
+Supprimer les anciens builds ✓ — puis mettre 10 dans "Nombre de builds à conserver" (cohérent avec le logRotator dans le Jenkinsfile)
+GitHub project ✓ — colle l'URL du repo : https://github.com/GitHub_User/Project_Name
+
+section Pipeline (en bas de page) :
+
+Definition : Pipeline script from SCM
+SCM : Git
+Repository URL : https://github.com/GitHub_User/Project_Name.git
+Branch : */main
+Script Path : Jenkinsfile
+
+Add Token (repo)
+Commit Jenkinsfile
+
+- webhook GitHub → Jenkins
+1. Rendre Jenkins accessible depuis GitHub: Jenkins tourne sur localhost:9105 — GitHub ne peut pas l'atteindre. Il faut un tunnel. 
+'''
+    ngrok http 9105
+'''
+2. Configurer le webhook GitHub
+GitHub → ton repo → Settings → Webhooks → Add webhook
+→ Payload URL : https://abc123.ngrok.io/github-webhook/
+→ Content type : application/json
+→ Just the push event
+→ Active ✓
+→ Add webhook
+
+3. Configurer le job Jenkins
+Config du job → Build Triggers
+→ cocher "GitHub hook trigger for GITScm polling"
+
+4. Installer le plugin GitHub dans Jenkins
+Administrer Jenkins → Plugins → Available
+→ chercher "GitHub" → installer "GitHub Integration "
+
+
 ### PostgreSQL
 créer un projet dans Neon
 créér une database dans l'interface
