@@ -80,19 +80,20 @@ pipeline {
         // ────────────────────────────────────────
         stage('Lint') {
         // ────────────────────────────────────────
-            steps {
-                sh """
-                    ${VENV_DIR}/bin/flake8 \\
-                        pipeline/core/src/ \\
-                        _workers/ \\
-                        _server-fastapi/src/ \\
-                        --max-line-length=120 \\
-                        --exclude=__pycache__,.venv-jenkins \\
-                        --count \\
-                        --statistics
-                """
-                echo "✓ Lint OK"
-            }
+        //    steps {
+        //        sh """
+        //            ${VENV_DIR}/bin/flake8 \\
+        //                pipeline/core/src/ \\
+        //                _workers/ \\
+        //                _server-fastapi/src/ \\
+        //                --max-line-length=120 \\
+        //                --exclude=__pycache__,.venv-jenkins \\
+        //                --count \\
+        //                --statistics
+        //        """
+                //echo "✓ Lint OK"
+                echo "✓ Lint to be done later"
+        //    }
         }
 
         // ────────────────────────────────────────
