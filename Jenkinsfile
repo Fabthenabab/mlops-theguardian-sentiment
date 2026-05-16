@@ -71,7 +71,7 @@ pipeline {
                 sh """
                     python3 -m venv ${VENV_DIR}
                     ${VENV_DIR}/bin/pip install --upgrade pip --quiet
-                    ${VENV_DIR}/bin/pip install -r requirements-jenskins.txt --quiet
+                    ${VENV_DIR}/bin/pip install -r requirements-jenkins.txt --quiet
                 """
                 echo "✓ Dépendances installées"
             }
