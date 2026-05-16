@@ -1,4 +1,4 @@
-# requirements-ci.txt
+# requirements-jenkins.txt
 # Dépendances CI uniquement — tests unitaires mockés
 # Torch, FinBERT et autres dépendances ML lourdes sont exclues
 # car tous les appels externes sont mockés dans les tests
@@ -15,4 +15,7 @@ python-dotenv==1.2.2
 requests==2.33.1
 SQLAlchemy==2.0.49
 psycopg2-binary==2.9.12
+
+boto3==1.43.6
+
 flake8==7.3.0
