@@ -60,7 +60,7 @@ pipeline {
         // ────────────────────────────────────────
             steps {
                 checkout scm
-                echo "✓ Checkout — branch: 'main' | commit: ${env.GIT_COMMIT?.take(8)}"
+                echo "✓ Checkout — branch: 'main'"
             }
         }
 
