@@ -53,6 +53,8 @@ def load_reference() -> pd.DataFrame:
 # ──────────────────────────────────────────────
 #  Drift detection
 # ──────────────────────────────────────────────
+from evidently.report import Report
+from evidently.metric_preset import DataDriftPreset
 
 def compute_drift(current: pd.DataFrame, reference: pd.DataFrame) -> dict:
     """
@@ -70,8 +72,6 @@ def compute_drift(current: pd.DataFrame, reference: pd.DataFrame) -> dict:
             details     : dict — per-column drift scores
     """
     logger.debug("function compute_drift")
-    from evidently.report import Report
-    from evidently.metric_preset import DataDriftPreset
 
     report = Report(metrics=[DataDriftPreset()])
     report.run(reference_data=reference, current_data=current)
@@ -87,9 +87,7 @@ def compute_drift(current: pd.DataFrame, reference: pd.DataFrame) -> dict:
     drift       = dataset_metric["dataset_drift"]
     drift_score = dataset_metric["share_of_drifted_columns"]
 
-    logger.info(
-        f"Drift — share_drifted: {drift_score:.3f} (thr: {DRIFT_THRESHOLD_SCORE}) | drift: {drift}"
-    )
+    logger.info(f"Drift — share_drifted: {drift_score:.3f} (thr: {DRIFT_THRESHOLD_SCORE}) | drift: {drift}")
 
     return {
         "drift":       drift,

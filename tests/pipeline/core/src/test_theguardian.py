@@ -93,11 +93,13 @@ def test_fetch_archives_case_2():
     Sur une seule page de résultats, requests.get doit être appelé
     exactement une fois.
     """
-    # Teste si fetch_archives appelle requests.get une fois pour 1 page
+    # Teste si fetch_archives appelle requests.get une seule fois pour 1 page
     # Arrange
     mock_resp = make_response([make_article("article-001")], pages=1)
  
     # Act
+    # Remplace ponctuellement requests.get dans l'appel de la fonction
+    # par une requête factice (sans appel HTTP) qui retourne mock_resp, et vérifie que c'est bien appelé
     with patch("pipeline.core.src.theguardian.requests.get", return_value=mock_resp) as mock_get:
         fetch_archives(2024, 1)
  
@@ -120,6 +122,7 @@ def test_fetch_archives_case_3():
     page2 = make_response([make_article("article-002")], pages=2)
  
     # Act
+    # side_effect=[page1, page2] : chaque appel à mock_get consomme l'élément suivant de la liste.
     with patch("pipeline.core.src.theguardian.requests.get", side_effect=[page1, page2]) as mock_get:
         with patch("pipeline.core.src.theguardian.time.sleep"):  # évite les 0.5s entre pages
             result = fetch_archives(2024, 1)

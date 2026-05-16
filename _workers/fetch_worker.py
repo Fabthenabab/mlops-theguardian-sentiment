@@ -39,15 +39,15 @@ JOB_ID = os.getenv("JOB_ID")
 # ===========================
 # RUN
 # ===========================
+from pipeline.core.src.sql import get_engine, fetch_job, update_job, fetch_last_article_date, insert_articles
+from pipeline.core.src.theguardian import fetch_archives
+from pipeline.core.src.sql import transform_articles
+
 def run(dry_run: bool = False, limit_months: int = None):
     logger.debug("fetch_worker started")
     engine = None
 
     try:
-        from pipeline.core.src.sql import get_engine, fetch_job, update_job, fetch_last_article_date, insert_articles
-        from pipeline.core.src.theguardian import fetch_archives
-        from pipeline.core.src.sql import transform_articles
-
         engine = get_engine()
 
         if JOB_ID:

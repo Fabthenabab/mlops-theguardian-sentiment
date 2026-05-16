@@ -16,7 +16,11 @@ include = ["pipeline*"]
 # ========================
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+# For tests that do not test packages, we need to make the dir functions findable by python path
+# modify syspath to allow these dirs to be searched for python files
+# for testing _server-fastapi/src... we have name collisions because of '-' in dir name (should have used '_' instead)
+# so we will import route_run with importlib in test routes
+pythonpath = [".", "_workers"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]

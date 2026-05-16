@@ -1,4 +1,3 @@
-
 """
 tests/pipeline/core/test_sql.py
  
