@@ -1,0 +1,17 @@
+# requirements-ci.txt
+# Dépendances CI uniquement — tests unitaires mockés
+# Torch, FinBERT et autres dépendances ML lourdes sont exclues
+# car tous les appels externes sont mockés dans les tests
+# --junit-xml est natif pytest, aucun plugin supplémentaire requis
+ 
+evidently==0.4.33
+fastapi==0.136.1
+httpx==0.28.1
+pandas==2.3.3
+prophet==1.3.0
+pytest==9.0.3
+python-dateutil==2.9.0.post0
+python-dotenv==1.2.2
+requests==2.33.1
+SQLAlchemy==2.0.49
+psycopg2-binary==2.9.12

@@ -598,3 +598,89 @@ dag_infer    → horaire
 dag_forecast → quotidien
 dag_monitor  → quotidien (après dag_forecast)
 dag_snapshot → hebdomadaire
+
+---
+# ADR-014 — Stratégie CI/CD Jenkins
+Date : 2026-05-16
+## Contexte
+
+Le projet nécessite une validation automatique du code avant chaque push GitHub.
+Le déploiement vers HuggingFace Spaces (make + rsync) reste une opération manuelle distincte — CI et déploiement ne font pas partie de la même séquence.
+
+Jenkins est déjà containerisé dans `_server-jenkins/` (Docker Compose : jenkins-blueocean + jenkins-docker DinD).
+La suite de tests pytest est entièrement mockée — aucun appel réseau ni DB réelle n'est effectué pendant les tests.
+
+Le projet suit un workflow Git simple : commits directs sur `main`.
+
+## Décisions
+
+### 1. Pas de Docker DinD pour les tests
+
+Les tests étant entièrement mockés, il n'est pas nécessaire de builder une image Docker ni de faire tourner les tests dans un container séparé.
+On exécute pytest directement dans le workspace Jenkins via un venv Python.
+
+**Conséquence :** suppression du problème de passage de fichiers entre containers rencontré dans un projet précédent (NYT). Les rapports de test sont produits directement dans le workspace Jenkins et consommés par le plugin JUnit.
+
+### 2. Deux niveaux de gate — critical et smoke
+
+```
+pytest -m critical   → gate bloquant  : 0 failure toléré, build FAILED si échec
+pytest -m smoke      → non bloquant   : build UNSTABLE si échec, pipeline continue
+```
+
+Les markers sont déclarés dans `pyproject.toml` :
+
+```toml
+markers = [
+    "critical: logique métier non-négociable — gate CI Jenkins bloquant",
+    "smoke:    sanity checks rapides — build UNSTABLE si échec",
+    "slow:     workers ML lourds — exclus du gate CI par défaut",
+    "integration: nécessite une vraie DB ou un appel réseau",
+]
+```
+
+`catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE')` est utilisé sur le stage smoke pour différencier UNSTABLE de FAILED dans Blue Ocean.
+
+### 3. Rapports de test via plugin JUnit
+
+`pytest --junit-xml=reports/critical.xml` + directive `junit` Jenkins.
+Blue Ocean affiche l'historique des tests nativement — pas de script de parsing JSON custom.
+
+Plugin à ajouter dans `_server-jenkins/Dockerfile` :
+
+```dockerfile
+RUN jenkins-plugin-cli --plugins "blueocean docker-workflow junit"
+```
+
+### 4. Notifications Discord — trois états
+
+| Statut Jenkins | Couleur Discord | Déclencheur         |
+|----------------|-----------------|---------------------|
+| SUCCESS        | Vert  (#2ecc71) | critical + smoke OK |
+| UNSTABLE       | Orange (#f1c40f)| smoke KO, critical OK |
+| FAILURE        | Rouge (#e74c3c) | critical KO         |
+
+Le webhook Discord est configuré directement dans le Jenkinsfile.
+Si le webhook doit être renouvelé, il est à modifier à un seul endroit.
+
+### 5. Lint flake8 — max-line-length 120
+
+Cibles : `pipeline/core/src/`, `_workers/`, `_server-fastapi/src/`.
+Seuil à 120 caractères (vs 79 PEP8 strict) pour tenir compte des f-strings SQL et des logs verbeux inhérents au projet.
+
+### 6. Git workflow — commits directs sur main
+
+Pas de branches feature ni de PR dans ce projet.
+Le Jenkinsfile utilise `checkout scm` et logue simplement le commit :
+
+```groovy
+echo "✓ Checkout — branch: 'main' | commit: ${env.GIT_COMMIT?.take(8)}"
+```
+
+## Conséquences
+
+- Pipeline léger et rapide : Install → Lint → Critical → Smoke en < 5 min.
+- Aucune dépendance à une registry Docker ou à des credentials externes pour les tests.
+- Le déploiement HF Spaces reste hors scope CI — décision intentionnelle
+  (opération manuelle via `make push`).
+- Le plugin `junit` doit être ajouté au Dockerfile Jenkins (voir section 3).

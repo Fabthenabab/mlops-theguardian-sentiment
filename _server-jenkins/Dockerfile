@@ -1,7 +1,7 @@
 FROM jenkins/jenkins:2.541.3-jdk21
 USER root
 
-RUN apt-get update && apt-get install -y lsb-release curl
+RUN apt-get update && apt-get install -y lsb-release curl python3 python3-pip python3.13-venv jq
 
 # Docker CLI
 RUN curl -fsSLo /usr/share/keyrings/docker-archive-keyring.asc \
@@ -17,4 +17,4 @@ RUN apt-get install -y python3 python3-pip jq
 RUN python3 --version
 
 USER jenkins
-RUN jenkins-plugin-cli --plugins "blueocean docker-workflow"
+RUN jenkins-plugin-cli --plugins "blueocean docker-workflow junit"
