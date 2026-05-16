@@ -42,6 +42,7 @@ pipeline {
     environment {
         VENV_DIR  = '.venv-jenkins'
         PYTHONPATH = "${env.WORKSPACE}"
+        PROJECT_NAME = 'theguardian'
     }
 
     options {
