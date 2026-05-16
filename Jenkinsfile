@@ -78,7 +78,7 @@ pipeline {
         }
 
         // ────────────────────────────────────────
-        stage('Lint') {
+        //stage('Lint') {
         // ────────────────────────────────────────
         //    steps {
         //        sh """
@@ -91,10 +91,9 @@ pipeline {
         //                --count \\
         //                --statistics
         //        """
-                //echo "✓ Lint OK"
-                echo "✓ Lint to be done later"
+        //      echo "✓ Lint OK"
         //    }
-        }
+        //}
 
         // ────────────────────────────────────────
         stage('Tests — critical') {
