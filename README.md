@@ -26,44 +26,59 @@ Système MLOps de veille économique automatisée : un moteur DL (Transformers) 
 2. Nouveau job → Pipeline
 3. Coller l'URL GitHub du repo
 4. Jenkins trouve le Jenkinsfile à la racine automatiquement
-5. Compléter les caractéristiques du job:
-   À cocher :
 
-Do not allow concurrent builds ✓ — évite deux builds simultanés sur le même workspace
-Supprimer les anciens builds ✓ — puis mettre 10 dans "Nombre de builds à conserver" (cohérent avec le logRotator dans le Jenkinsfile)
-GitHub project ✓ — colle l'URL du repo : https://github.com/GitHub_User/Project_Name
 
-section Pipeline (en bas de page) :
+##### Configurer (le job)
+
+**General**
+
+✓ Do not allow concurrent builds ✓ — évite deux builds simultanés sur le même workspace
+✓ GitHub project ✓ — colle l'URL du repo : https://github.com/GitHub_User/Project_Name
+✓ Supprimer les anciens builds ✓ — puis mettre 10 dans "Nombre de builds à conserver"
+
+**Triggers**
+
+✓  GitHub hook trigger for GITScm polling
+
+**Pipeline**
 
 Definition : Pipeline script from SCM
 SCM : Git
 Repository URL : https://github.com/GitHub_User/Project_Name.git
+Credentials : + Ajouter
 Branch : */main
 Script Path : Jenkinsfile
 
-Add Token (repo)
-Commit Jenkinsfile
+##### Administrer Jenkins
 
-- webhook GitHub → Jenkins
-1. Rendre Jenkins accessible depuis GitHub: Jenkins tourne sur localhost:9105 — GitHub ne peut pas l'atteindre. Il faut un tunnel. 
+**Configuration du système / Plugins**
+
+Installer le plugin GitHub dans Jenkins
+Administrer Jenkins → Plugins → Available
+→ chercher "GitHub" → installer "GitHub Integration "
+
+**Sécurité / Security**
+
+Git plugin notifyCommit access tokens → Current access tokens → + Add new access token
+Ex : 'github-webhook' → Copier Token
+
+##### NGROK
+
+Rendre Jenkins accessible depuis GitHub: Jenkins tourne sur localhost:9105 — GitHub ne peut pas l'atteindre. Il faut un tunnel. 
 '''
     ngrok http 9105
 '''
-2. Configurer le webhook GitHub
+
+##### Webhook GitHub
+
 GitHub → ton repo → Settings → Webhooks → Add webhook
-→ Payload URL : https://abc123.ngrok.io/github-webhook/
+→ Payload URL : <MAPPING_NGROK>/github-webhook/?token=<TOKEN_GÉNÉRÉ_PAR_JENKINS>
 → Content type : application/json
-→ Just the push event
-→ Active ✓
-→ Add webhook
+✓ Just the push event
+✓ Active
+→ + Add webhook
 
-3. Configurer le job Jenkins
-Config du job → Build Triggers
-→ cocher "GitHub hook trigger for GITScm polling"
 
-4. Installer le plugin GitHub dans Jenkins
-Administrer Jenkins → Plugins → Available
-→ chercher "GitHub" → installer "GitHub Integration "
 
 
 ### PostgreSQL
