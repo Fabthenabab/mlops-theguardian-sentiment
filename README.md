@@ -62,6 +62,14 @@ Administrer Jenkins → Plugins → Available
 Git plugin notifyCommit access tokens → Current access tokens → + Add new access token
 Ex : 'github-webhook' → Copier Token
 
+**Sécurité / Credentials
+
+→ Add Credentials
+→ Kind : Secret text
+→ Secret : https://discord.com/api/webhooks/1**************USER **************/********HOOK**************
+→ ID : discord-webhook
+→ Save
+
 ##### NGROK
 
 Rendre Jenkins accessible depuis GitHub: Jenkins tourne sur localhost:9105 — GitHub ne peut pas l'atteindre. Il faut un tunnel. 
