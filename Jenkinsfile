@@ -17,22 +17,24 @@
 def sendDiscord(String status, String color) {
     def emoji  = status == 'SUCCESS' ? '✅' : '❌'
     def label  = status == 'SUCCESS' ? 'RÉUSSI' : 'ÉCHOUÉ'
-    sh """
-        curl -s -X POST \\
-            -H 'Content-Type: application/json' \\
-            -d '{
-                "embeds": [{
-                    "title": "${emoji} BUILD ${label} — ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                    "color": ${color},
-                    "fields": [
-                        {"name": "Branch",  "value": "${env.GIT_BRANCH}", "inline": true},
-                        {"name": "Durée",   "value": "${currentBuild.durationString}", "inline": true},
-                        {"name": "Détails", "value": "[Ouvrir Blue Ocean](${env.BUILD_URL})", "inline": false}
-                    ]
-                }]
-            }' \\
-            https://discord.com/api/webhooks/1502309018012614726/xfDkPI6fNHxA8ykoYRyEsw1QQd_eGAsR6tuKFl7r0z3YaZZVUfcXeFmVCzMJmgEPAXrU
-    """
+    withCredentials([string(credentialsId: 'discord-webhook', variable: 'DISCORD_WEBHOOK')]) {
+        sh """
+            curl -s -X POST \\
+                -H 'Content-Type: application/json' \\
+                -d '{
+                    "embeds": [{
+                        "title": "${emoji} BUILD ${label} — ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                        "color": ${color},
+                        "fields": [
+                            {"name": "Branch",  "value": "main", "inline": true},
+                            {"name": "Durée",   "value": "${currentBuild.durationString}", "inline": true},
+                            {"name": "Détails", "value": "[Ouvrir Blue Ocean](${env.BUILD_URL})", "inline": false}
+                        ]
+                    }]
+                }' \\
+                \${DISCORD_WEBHOOK}
+        """
+    }
 }
 
 
@@ -159,21 +161,24 @@ pipeline {
         }
         unstable {
             // Smoke failed mais critical OK — on notifie en orange
-            sh """
-                curl -s -X POST \\
-                    -H 'Content-Type: application/json' \\
-                    -d '{
-                        "embeds": [{
-                            "title": "⚠️ BUILD INSTABLE — ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                            "color": 16776960,
-                            "fields": [
-                                {"name": "Cause",   "value": "Tests smoke en échec (critical OK)", "inline": false},
-                                {"name": "Détails", "value": "[Ouvrir Blue Ocean](${env.BUILD_URL})", "inline": false}
-                            ]
-                        }]
-                    }' \\
-                    https://discord.com/api/webhooks/1502309018012614726/xfDkPI6fNHxA8ykoYRyEsw1QQd_eGAsR6tuKFl7r0z3YaZZVUfcXeFmVCzMJmgEPAXrU
-            """
+            withCredentials([string(credentialsId: 'discord-webhook', variable: 'DISCORD_WEBHOOK')]) {
+                sh """
+                    curl -s -X POST \\
+                        -H 'Content-Type: application/json' \\
+                        -d '{
+                            "embeds": [{
+                                "title": "${emoji} BUILD ${label} — ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                                "color": ${color},
+                                "fields": [
+                                    {"name": "Branch",  "value": "main", "inline": true},
+                                    {"name": "Durée",   "value": "${currentBuild.durationString}", "inline": true},
+                                    {"name": "Détails", "value": "[Ouvrir Blue Ocean](${env.BUILD_URL})", "inline": false}
+                                ]
+                            }]
+                        }' \\
+                        \${DISCORD_WEBHOOK}
+                """
+            }
         }
     }
 }
