@@ -31,7 +31,6 @@ data
 # Docs
 #docs
 docs/plan.txt
-docs/presentation.md
 *.webm
 
 # Externals
